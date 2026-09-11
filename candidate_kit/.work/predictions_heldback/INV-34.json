@@ -1,0 +1,11 @@
+{
+  "file": "INV-34.pdf",
+  "payables": [],
+  "declined": [
+    {
+      "doc_type": "INVOICE",
+      "reason": "not_a_payable"
+    }
+  ],
+  "invoice_number": "1220-127612"
+}

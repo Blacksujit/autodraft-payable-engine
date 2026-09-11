@@ -1,0 +1,11 @@
+{
+  "file": "INV-01.pdf",
+  "payables": [],
+  "declined": [
+    {
+      "doc_type": "INVOICE",
+      "reason": "Invoice #852566 from NorthwindOperationsOU. ERP gate failed (gross_mismatch:438.00:0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+    }
+  ],
+  "invoice_number": "852566"
+}

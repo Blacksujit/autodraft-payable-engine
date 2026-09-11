@@ -1,0 +1,11 @@
+{
+  "file": "HLD-08.pdf",
+  "payables": [],
+  "declined": [
+    {
+      "doc_type": "INVOICE",
+      "reason": "Invoice from Fax :(893)6555156 CopyTax Invoice. ERP gate failed (gross_mismatch:?:0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+    }
+  ],
+  "invoice_number": ""
+}

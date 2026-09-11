@@ -1,0 +1,50 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Local environment/config files
+.env
+.env.*
+*.local
+
+# Jupyter / editor artifacts
+.ipynb_checkpoints/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test / coverage output
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project-specific generated artifacts
+output/
+*.pdf.txt
+*.tmp
+logs/
+
+# If you later add local data snapshots or generated JSON not meant for version control
+# uncomment below as needed:
+# generated/
+# data/local/

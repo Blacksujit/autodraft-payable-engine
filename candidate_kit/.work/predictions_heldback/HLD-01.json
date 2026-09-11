@@ -1,0 +1,11 @@
+{
+  "file": "HLD-01.pdf",
+  "payables": [],
+  "declined": [
+    {
+      "doc_type": "INVOICE",
+      "reason": "Invoice #SI6675/02/467 from Larkspur Technologies. ERP gate failed (gross_mismatch:?:0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+    }
+  ],
+  "invoice_number": "SI6675/02/467"
+}

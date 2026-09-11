@@ -1,0 +1,11 @@
+{
+  "file": "INV-25.pdf",
+  "payables": [],
+  "declined": [
+    {
+      "doc_type": "INVOICE",
+      "reason": "Invoice. ERP gate failed (gross_mismatch:?:0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+    }
+  ],
+  "invoice_number": ""
+}

@@ -1,0 +1,11 @@
+{
+  "file": "HLD-05.pdf",
+  "payables": [],
+  "declined": [
+    {
+      "doc_type": "INVOICE",
+      "reason": "Invoice from 7769922058 12/06/2026. ERP gate failed (gross_mismatch:?:0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+    }
+  ],
+  "invoice_number": ""
+}
