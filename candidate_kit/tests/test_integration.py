@@ -21,6 +21,8 @@ def output_dir(tmp_path):
 
 class TestFullPipeline:
     """Integration tests that require actual PDF documents"""
+
+    def test_process_all_documents(self, documents_dir, output_dir):
         """Process all documents and verify no crashes"""
         output_dir.mkdir(exist_ok=True)
         

@@ -96,11 +96,12 @@ def parse_amount(token: str) -> Optional[Amount]:
       * 1234      -> integer
     Returns None when not parseable, or when ambiguous (e.g. 1.2345).
     """
+    if token is None:
+        return None
     if isinstance(token, (int, float, Decimal)):
         token = str(token)
-    t = token.strip().replace(" ", "")
-    m = _NUM_RE.search(t)
-    if m is None:
+    s = str(token).strip().replace("\u00a0", "").replace(" ", "")
+    if not s:
         return None
     s = m.group(0).strip()
 
