@@ -42,6 +42,70 @@ The project therefore builds on three non-negotiable ideas:
 
 ## Quick Start
 
+## Architecture
+
+```text
+documents/*.pdf
+      │
+      ▼
+┌───────────────────────────────────────────────┐
+│  Render + OCR acquisition                     │
+│  text layer if available; rendered pages +    │
+│  OCR otherwise                                │
+└───────────────────────────────────────────────┘
+      │
+      ▼
+┌───────────────────────────────────────────────┐
+│  Geometry reconstruction                      │
+│  words → lines → rows → columns → tables      │
+│  header/footer and table-region separation    │
+└───────────────────────────────────────────────┘
+      │
+      ▼
+┌───────────────────────────────────────────────┐
+│  Normalization + field extraction             │
+│  dates, currencies, numbers, line items,      │
+│  taxes, totals                                │
+└───────────────────────────────────────────────┘
+      │
+      ▼
+┌───────────────────────────────────────────────┐
+│  Document classification                      │
+│  INVOICE / CREDIT_MEMO / NOT_A_PAYABLE        │
+└───────────────────────────────────────────────┘
+      │
+      ▼
+┌───────────────────────────────────────────────┐
+│  Master resolution                            │
+│  suppliers, buyer orgs, tax, payment terms,   │
+│  PO references                                │
+└───────────────────────────────────────────────┘
+      │
+      ▼
+┌───────────────────────────────────────────────┐
+│  Oracle gate                                  │
+│  compare ERP gross to printed gross           │
+│  enforce tax-placement validity               │
+└───────────────────────────────────────────────┘
+      │
+      ▼
+┌───────────────────────────────────────────────┐
+│  Output JSON                                  │
+│  payables[] / declined[]                      │
+└───────────────────────────────────────────────┘
+
+```
+---
+
+This is not a naive extraction pipeline. It is a layered, validation-driven architecture:
+
+- source acquisition is separated from document understanding
+- geometry is reconstructed before field binding
+- semantic classification occurs before final emission
+- ERP validation is the final gate, not an afterthought
+
+---
+
 ```bash
 # One command: input directory → output directory
 python -m autodraft documents output
@@ -80,68 +144,6 @@ A payable record contains invoice and payment metadata, line items, taxes, and E
 ```bash
 pip install rapidocr_onnxruntime rapidfuzz pymupdf
 ```
-
----
-
-## Architecture
-
-```text
-documents/*.pdf
-      │
-      ▼
-┌───────────────────────────────────────────────┐
-│  Render + OCR acquisition                     │
-│  text layer if available; rendered pages +    │
-│  OCR otherwise                                │
-└───────────────────────────────────────────────┘
-      │
-      ▼
-┌───────────────────────────────────────────────┐
-│  Geometry reconstruction                     │
-│  words → lines → rows → columns → tables     │
-│  header/footer and table-region separation    │
-└───────────────────────────────────────────────┘
-      │
-      ▼
-┌───────────────────────────────────────────────┐
-│  Normalization + field extraction             │
-│  dates, currencies, numbers, line items,      │
-│  taxes, totals                                │
-└───────────────────────────────────────────────┘
-      │
-      ▼
-┌───────────────────────────────────────────────┐
-│  Document classification                     │
-│  INVOICE / CREDIT_MEMO / NOT_A_PAYABLE       │
-└───────────────────────────────────────────────┘
-      │
-      ▼
-┌───────────────────────────────────────────────┐
-│  Master resolution                           │
-│  suppliers, buyer orgs, tax, payment terms, │
-│  PO references                                │
-└───────────────────────────────────────────────┘
-      │
-      ▼
-┌───────────────────────────────────────────────┐
-│  Oracle gate                                 │
-│  compare ERP gross to printed gross          │
-│  enforce tax-placement validity              │
-└───────────────────────────────────────────────┘
-      │
-      ▼
-┌───────────────────────────────────────────────┐
-│  Output JSON                                 │
-│  payables[] / declined[]                     │
-└───────────────────────────────────────────────┘
-```
-
-This is not a naive extraction pipeline. It is a layered, validation-driven architecture:
-
-- source acquisition is separated from document understanding
-- geometry is reconstructed before field binding
-- semantic classification occurs before final emission
-- ERP validation is the final gate, not an afterthought
 
 ---
 
