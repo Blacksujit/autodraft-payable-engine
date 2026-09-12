@@ -103,12 +103,22 @@ def parse_amount(token: str) -> Optional[Amount]:
     s = str(token).strip().replace("\u00a0", "").replace(" ", "")
     if not s:
         return None
+    
+    # Check for negative sign
+    neg = s.lstrip().startswith("-")
+    if neg:
+        s = s.lstrip()[1:]  # Remove the minus sign
+    
+    # Find the numeric part using regex
+    import re
+    m = re.search(r'[-+]?\d[\d.,]*', s)
+    if not m:
+        return None
     s = m.group(0).strip()
-
+    
     digits = [c for c in s if c.isdigit()]
     if not digits:
         return None
-    neg = s.lstrip().startswith("-")
 
     # isolate the numeric core
     body = s.replace(",", "|").replace(".", "|").split("|")
@@ -179,9 +189,9 @@ _DATE_RE = re.compile(
     r"\b(\d{1,4})[\-\./](\d{1,2})[\-\./](\d{1,4})\b"
 )
 
-# Additional pattern for formats like "30Apr2025", "31May2025"
+# Additional pattern for formats like "30Apr2025", "31May2025", "15January2026"
 _DATE_ALPHA_RE = re.compile(
-    r"\b(\d{1,2})(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(\d{2,4})\b", re.I
+    r"\b(\d{1,2})(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)(\d{2,4})\b", re.I
 )
 
 _MONTH_MAP = {

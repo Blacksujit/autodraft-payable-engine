@@ -6,6 +6,24 @@ The system exists to solve a practical and difficult problem: reading supplier i
 
 ---
 
+## Table of Contents
+
+- [Mission](#mission)
+- [Why this project matters](#why-this-project-matters)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [Requirements](#requirements)
+- [Key technical behavior](#key-technical-behavior)
+- [Oracle gate](#oracle-gate)
+- [Classification and output semantics](#classification-and-output-semantics)
+- [Output Example](#output-example)
+- [Refusal rules](#refusal-rules)
+- [Operating model](#operating-model)
+- [References](#references)
+- [Summary](#summary)
+
+---
+
 ## Mission
 
 The project turns supplier documents into machine-structured payable records that can be booked by an ERP, while explicitly rejecting documents that are not payables.
@@ -23,105 +41,33 @@ This makes the project fundamentally different from simple OCR or PDF scraping p
 
 ## Why this project matters
 
-Supplier invoices are not just text fragments. They encode financial meaning in layout, row structure, tax placement, totals, dates, addresses, and item hierarchy.
+Supplier invoices are financial records, not generic PDFs. The system extracts only records that can be validated against the ERP's own rules.
 
-The challenge is not merely extracting words; it is reconstructing the obligations hidden in the document and validating them under the ERP contract.
+It focuses on three things:
 
-The project therefore builds on three non-negotiable ideas:
-
-1. Grounded extraction
-   No value is emitted unless it is either visible on the page or derived by a mathematically explicit, document-supported transformation.
-
-2. Structural fidelity
-   A total line may appear correct while the tax placement is wrong. ERP validity depends on structure, not just arithmetic.
-
-3. Honest decline
-   If a document is not a payable, or if the evidence is insufficient, it should be placed in `declined[]` with a cause, not forced into `payables[]`.
+1. Grounded extraction — every value must be supported by the document.
+2. Structural correctness — tax and totals must match the invoice layout, not just the numbers.
+3. Honest refusal — if the document is not a payable, it is declined instead of guessed.
 
 ---
 
 ## Quick Start
 
-## Architecture
-
-```text
-documents/*.pdf
-      │
-      ▼
-┌───────────────────────────────────────────────┐
-│  Render + OCR acquisition                     │
-│  text layer if available; rendered pages +    │
-│  OCR otherwise                                │
-└───────────────────────────────────────────────┘
-      │
-      ▼
-┌───────────────────────────────────────────────┐
-│  Geometry reconstruction                      │
-│  words → lines → rows → columns → tables      │
-│  header/footer and table-region separation    │
-└───────────────────────────────────────────────┘
-      │
-      ▼
-┌───────────────────────────────────────────────┐
-│  Normalization + field extraction             │
-│  dates, currencies, numbers, line items,      │
-│  taxes, totals                                │
-└───────────────────────────────────────────────┘
-      │
-      ▼
-┌───────────────────────────────────────────────┐
-│  Document classification                      │
-│  INVOICE / CREDIT_MEMO / NOT_A_PAYABLE        │
-└───────────────────────────────────────────────┘
-      │
-      ▼
-┌───────────────────────────────────────────────┐
-│  Master resolution                            │
-│  suppliers, buyer orgs, tax, payment terms,   │
-│  PO references                                │
-└───────────────────────────────────────────────┘
-      │
-      ▼
-┌───────────────────────────────────────────────┐
-│  Oracle gate                                  │
-│  compare ERP gross to printed gross           │
-│  enforce tax-placement validity               │
-└───────────────────────────────────────────────┘
-      │
-      ▼
-┌───────────────────────────────────────────────┐
-│  Output JSON                                  │
-│  payables[] / declined[]                      │
-└───────────────────────────────────────────────┘
-
-```
----
-
-This is not a naive extraction pipeline. It is a layered, validation-driven architecture:
-
-- source acquisition is separated from document understanding
-- geometry is reconstructed before field binding
-- semantic classification occurs before final emission
-- ERP validation is the final gate, not an afterthought
-
----
-
 ```bash
-# One command: input directory → output directory
+# Input directory -> output directory
 python -m autodraft documents output
 ```
 
-This command:
+The pipeline:
 
-- reads every `documents/*.pdf`
-- renders or OCRs pages as required
-- extracts structured invoice fields and line items
-- classifies each document as invoice, credit memo, or non-payable
-- resolves available master data
-- validates against a sealed ERP oracle
-- writes one JSON file per input PDF to `output/`
+- reads PDFs from `documents/`
+- extracts structured fields from text or rendered pages
+- classifies each file as `INVOICE`, `CREDIT_MEMO`, or `NOT_A_PAYABLE`
+- resolves master data when available
+- validates the result using the ERP oracle
+- writes one JSON result per input document in `output/`
 
-The output shape is:
+Example output:
 
 ```json
 {
@@ -131,7 +77,51 @@ The output shape is:
 }
 ```
 
-A payable record contains invoice and payment metadata, line items, taxes, and ERP-ready fields. A declined document contains the reason the document is not a payable.
+---
+
+## Architecture
+
+```text
+documents/*.pdf
+      │
+      ▼
+┌───────────────────────────────────────────────┐
+│  Render / OCR acquisition                     │
+│  text layer if available; otherwise render    │
+└───────────────────────────────────────────────┘
+      │
+      ▼
+┌───────────────────────────────────────────────┐
+│  Geometry reconstruction                      │
+│  words → lines → rows → columns               │
+└───────────────────────────────────────────────┘
+      │
+      ▼
+┌───────────────────────────────────────────────┐
+│  Normalization + field extraction             │
+│  dates, numbers, taxes, totals, line items    │
+└───────────────────────────────────────────────┘
+      │
+      ▼
+┌───────────────────────────────────────────────┐
+│  Classification                               │
+│  INVOICE / CREDIT_MEMO / NOT_A_PAYABLE        │
+└───────────────────────────────────────────────┘
+      │
+      ▼
+┌───────────────────────────────────────────────┐
+│  ERP validation gate                          │
+│  recompute gross and tax placement            │
+└───────────────────────────────────────────────┘
+      │
+      ▼
+┌───────────────────────────────────────────────┐
+│  Output JSON                                  │
+│  payables[] / declined[]                      │
+└───────────────────────────────────────────────┘
+```
+
+The design is simple: understand the document, classify it, validate it, then emit only what the ERP can safely book.
 
 ---
 
@@ -147,101 +137,34 @@ pip install rapidocr_onnxruntime rapidfuzz pymupdf
 
 ---
 
-## Design principles in practice
-
-### 1. Deterministic engineering core
-
-The core processing is designed to be deterministic and explainable. It relies on:
-
-- page geometry
-- page-relative coordinates and ratios
-- label recognition and field association
-- explicit normalization rules
-
-This keeps the pipeline robust across different PDFs and minimizes dependence on brittle per-file logic.
-
-### 2. Grounding ledger
-
-Every emitted field is traceable to document evidence. The system keeps a provenance ledger that tracks where a value came from, which page it came from, and how it was derived.
-
-This is crucial in a finance workflow: an answer is more valuable when it can be explained and audited.
-
-### 3. Conservative refusal behavior
-
-The project is intentionally willing to say "no".
-
-If a document is ambiguous, unsupported, or structurally inconsistent, the correct action is not to fabricate a payable. The correct action is to decline it with a specific reason and let the downstream workflow decide how to handle it.
-
----
-
 ## Key technical behavior
 
-### Render and OCR flow
-
-The pipeline supports both embedded text and scanned documents:
-
-- if a PDF contains extractable text, use it
-- if not, render pages and run OCR
-- all downstream stages use a common word-and-box representation
-
-This makes the system robust across mixed corpora without introducing source-specific logic downstream.
-
-### Locale-aware numeric normalization
-
-Invoice numbers vary in formatting and locale. The project handles mixed numeric patterns such as:
-
-- `1.234,56`
-- `1,234.56`
-- `1234.56`
-- `73,00`
-- `438.00`
-
-These are normalized into a canonical decimal form before being used in a payable record.
-
-### Tax correctness and placement
-
-The project does not treat tax as a purely arithmetic afterthought. It recognizes that different documents place taxes at different structural points:
-
-- line-level tax
-- header tax
-- total-only tax
-- credit memo tax migration
-
-The ERP gate validates the final placement. A field may numerically look correct but still fail if the structure is inconsistent with the document.
+- Render OCR if the PDF does not have usable text.
+- Normalize mixed number formats like `1.234,56`, `1,234.56`, and `73,00`.
+- Preserve document structure when matching taxes and totals.
+- Reject unsupported or ambiguous files rather than forcing a result.
 
 ---
 
 ## Oracle gate
 
-The ERP recompute is a sealed black box (`erp.erp_book`). A payable emits only when:
+The ERP recomputation is the final gate. A payable is emitted only if:
 
 ```python
 abs(erp_book(payable).will_book_gross - printed_gross) <= 0.01
 ```
 
-This is the critical correctness rule. It ensures the output record is not merely plausible to a reader; it is valid from the perspective of the actual booking engine.
-
-The oracle tries canonical tax placements in priority order:
-
-1. `keep` — extracted placement as-is
-2. `no_header_mods` — remove ambiguous header charges
-3. `solo_total` / `solo_gross` — single-line fallback
-4. `header_taxes` — credit memo line taxes moved to header
-5. `header_amount` / `header_rate` / `line_rate` — canonical tax migrations
-
-The first placement that passes is accepted. If no placement passes, the document is declined with a named gate failure rather than being forced through.
+If the document does not pass this check, it is declined with a clear reason instead of being silently altered.
 
 ---
 
 ## Classification and output semantics
 
-Each input is classified as one of the following:
+Each input is classified as one of:
 
 - `INVOICE`
 - `CREDIT_MEMO`
 - `NOT_A_PAYABLE`
-
-A credit memo remains a payable record, but with credit-style semantics. A non-payable doc goes to `declined[]` with reason metadata instead of being emitted as a payable.
 
 Examples of non-payables:
 
@@ -250,7 +173,9 @@ Examples of non-payables:
 - customs forms
 - statements
 - utility reimbursement documents
-- boilerplate and supporting attachments
+- boilerplate / supporting attachments
+
+A credit memo remains a payable record with credit semantics. A non-payable goes into `declined[]` rather than `payables[]`.
 
 ---
 
@@ -274,10 +199,18 @@ Examples of non-payables:
     "buyer": { "company_code": "BOLTGROUP" },
     "payment_term_id": "Net_10",
     "gross_total": "438.00",
-    "line_items": [
-      { "description": "Projektmanagement", "quantity": "4", "unit_price": "73.00", "total": "292.00" }
-    ],
-    "taxes": [{ "tax_type": "VAT", "tax_name": "Reverse Charge", "tax_rate": "0", "tax_amount": "0" }]
+    "line_items": [{
+      "description": "Projektmanagement",
+      "quantity": "4",
+      "unit_price": "73.00",
+      "total": "292.00"
+    }],
+    "taxes": [{
+      "tax_type": "VAT",
+      "tax_name": "Reverse Charge",
+      "tax_rate": "0",
+      "tax_amount": "0"
+    }]
   }],
   "declined": []
 }
@@ -287,56 +220,47 @@ Examples of non-payables:
 
 ## Refusal rules
 
-The project is deliberately engineered to reject wrong answers rather than guess them.
+The system is intentionally conservative.
 
-### 1. No invented values
-Any field value must be grounded in the document or derived from data explicitly present.
+- No invented values
+- No invented codes
+- No silent structural corrections
+- If evidence is weak or the document is not a payable, decline it
 
-### 2. No invented codes
-Master data matching is scored and corroborated. Weak or ambiguous matches remain empty rather than guessed.
-
-### 3. No creative corrections
-The system does not silently rewrite invoice structure to make numbers fit. If the document does not support the correction, it declines.
-
-This is a strong design choice and one of the major differentiators of the project.
+This is a core requirement for financial automation, where wrong output is more dangerous than no output.
 
 ---
 
 ## Operating model
 
-The intended workflow is:
-
-1. place PDFs in `documents/`
-2. run `python -m autodraft documents output`
-3. inspect resulting `output/*.json`
-4. review any documents in `declined[]` for reasons and failed gates
-5. keep the pipeline conservative and traceable
-
-This is a real engineering pattern: the system emphasizes correctness, auditability, and operational honesty over volume of extracted output.
+1. Place PDFs in `documents/`
+2. Run `python -m autodraft documents output`
+3. Review generated `output/*.json`
+4. Check any entries in `declined[]`
+5. Keep the pipeline conservative and auditable
 
 ---
 
-## Repository references
+## References
 
-- `ARCHITECTURE.md` — detailed engineering and design rationale
-- `ROADMAP.md` — phased verification and release gates
-- `AUTODRAFT_SCHEMA.md` — payable JSON schema contract
-- `DESIGN.md` — design brief and held-back-document reasoning
+Repository references:
+
+- `ARCHITECTURE.md` — pipeline and engineering design
+- `ROADMAP.md` — verification and release gates
+- `AUTODRAFT_SCHEMA.md` — payable output schema
+- `DESIGN.md` — design rationale and held-back-document reasoning
+- `erp.py` — sealed ERP oracle used for validation
+
+Related financial/document automation context:
+
+- invoice extraction and table reconstruction from supplier PDFs
+- ERP gross validation and tax placement checks
+- document classification for invoice, credit memo, and non-payable detection
 
 ---
 
 ## Summary
 
-Autodraft is not a generic PDF parser. It is a grounded financial-document extraction engine designed to convert supplier invoices into valid ERP-bookable payables while refusing unsupported or non-payable documents.
+Autodraft is a practical payable-validation pipeline for supplier documents. It does not try to extract every PDF into a plausible result. It extracts only documents that can be grounded, structured, and validated under ERP rules.
 
-Its core value is the combination of:
-
-- deterministic page reconstruction
-- source-agnostic extraction
-- locale-aware normalization
-- tax-structure correctness
-- master-data resolution
-- strict ERP oracle validation
-- evidence-based refusal behavior
-
-The project is engineered to behave like a professional payable automation system, not a demo that overfits to a small happy path.
+The purpose is straightforward: produce valid payable records or explicit declines, not invented ones.
