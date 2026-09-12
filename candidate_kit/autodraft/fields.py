@@ -68,9 +68,15 @@ _POS_HDR = ("pos", "position", "nr", "no", "lfd")
 def assign_roles(table: Table) -> Dict[str, int]:
     roles = {"unit": -1, "qty": -1, "total": -1, "discount": -1, "pos": -1}
     header = table.header_row
+    descr_has_qty = False
     if header is not None:
         hrow = table.rows.get(header, {})
         if hrow:
+            if Table.DESCR in hrow:
+                descr_label = _norm(" ".join(t for bs, t in hrow[Table.DESCR]))
+                if any(k in descr_label for k in _QTY_HDR):
+                    descr_has_qty = True
+
             for col_idx, toks in hrow.items():
                 if col_idx == Table.DESCR:
                     continue
@@ -87,14 +93,46 @@ def assign_roles(table: Table) -> Dict[str, int]:
                     roles["unit"] = col_idx
                 elif any(k in label for k in _POS_HDR):
                     roles["pos"] = col_idx
-            if roles["qty"] >= 0 or roles["unit"] >= 0 or roles["total"] >= 0:
-                return roles
 
     money = sorted(c.index for c in table.columns if c.index in table.money_cols)
     if money:
-        roles["unit"] = money[0]
-        if len(money) > 1:
-            roles["total"] = money[-1]
+        # Check if first money column has integer values (likely quantity)
+        first_money_is_qty = False
+        if len(money) >= 2:
+            first_money_col = money[0]
+            int_count = 0
+            total_count = 0
+            for r in sorted(table.rows):
+                if r == header:
+                    continue
+                val = table.cell(r, money[0])
+                a = _money_token(table.cell(r, money[0]))
+                if a is not None and a == a.to_integral_value() and a > 0:
+                    int_count += 1
+                total_count += 1
+            if total_count > 0 and int_count / total_count >= 0.5:
+                first_money_is_qty = True
+
+        if descr_has_qty and len(money) >= 2:
+            roles["qty"] = money[0]
+            roles["unit"] = money[1]
+            if len(money) > 2:
+                roles["total"] = money[-1]
+        elif first_money_is_qty and len(money) >= 2:
+            # First money column has integer values -> likely quantity
+            roles["qty"] = money[0]
+            roles["unit"] = money[1]
+            if len(money) > 2:
+                roles["total"] = money[-1]
+        elif roles["unit"] < 0:
+            roles["unit"] = money[0]
+            if len(money) > 1:
+                roles["total"] = money[-1]
+
+    # If unit and total are the same column, clear unit (no separate unit price column)
+    if roles["unit"] >= 0 and roles["unit"] == roles["total"]:
+        roles["unit"] = -1
+
     best, best_score = None, -1
     for ci in [c.index for c in table.columns if c.index not in table.money_cols and c.index != Table.DESCR]:
         cnt, mx = 0, 0
@@ -107,7 +145,8 @@ def assign_roles(table: Table) -> Dict[str, int]:
                 mx = max(mx, int(a))
         if cnt >= 1 and 0 < mx <= 100000 and cnt > best_score:
             best, best_score = ci, cnt
-    roles["qty"] = best if best is not None else -1
+    if roles["qty"] < 0:
+        roles["qty"] = best if best is not None else -1
     return roles
 
 
@@ -142,18 +181,20 @@ def _rel(s) -> Decimal:
 # ---------------------------------------------------------------- regexes ---
 
 _INV_NO_RE = [
-    re.compile(r"Rechnungs?Nr\.?[:#*\s]*([A-Za-z0-9][A-Za-z0-9/]{2,})", re.I),
-    re.compile(r"Rechnungsnummer\s*[:#]?\s*(\S+)", re.I),
-    re.compile(r"(?:invoice\s*(?:number|no)|\bno\.?)\s*[:#]?\s*([A-Z0-9][A-Z0-9/\-]{2,})", re.I),
-    re.compile(r"(?:doc(?:ument)?(?:#|\s*no))\s*[:#]?\s*([A-Z0-9][A-Z0-9/\-]{2,})", re.I),
+    # Specific invoice number patterns - avoid matching supplier names like "Northwind"
+    # Require at least one digit in the captured group
+    re.compile(r"(?:Rechnungs?Nr\.?|Rechnungsnummer|Invoice\s*(?:number|no)\.?|Doc(?:ument)?\s*(?:#|no))\s*[:#]?\s*([A-Za-z0-9]*[0-9][A-Za-z0-9/\-]{2,})", re.I),
+    # Fallback: standalone INV... or similar patterns with digits
+    re.compile(r"\b(INV[0-9][A-Za-z0-9/\-]{4,})\b", re.I),
+    re.compile(r"\b([0-9]{6,})\b"),  # 6+ digit numbers as last resort
 ]
 _DATE_LABEL_RE = re.compile(
-    r"(?:Rechnungsdatum|Invoice\s*Date|Datum|Date)\s*[:#]?\s*(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})", re.I)
-_ANY_DATE_RE = re.compile(r"\b(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})\b")
+    r"(?:Rechnungsdatum|Invoice\s*Date|Datum|Date)\s*[:#]?\s*(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}|\d{1,2}[A-Za-z]{3}\d{2,4})", re.I)
+_ANY_DATE_RE = re.compile(r"\b(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}|\d{1,2}[A-Za-z]{3}\d{2,4})\b")
 _DUE_EXPL_RE = re.compile(
-    r"(?:zahlbar\s*(?:bis|zum)|due\s*(?:date|on)?|payment\s*(?:due|date))\s*[:#]?\s*(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})", re.I)
+    r"(?:zahlbar\s*(?:bis|zum)|due\s*(?:date|on)?|payment\s*(?:due|date)|DueDate)\s*[:#]?\s*(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}|\d{1,2}[A-Za-z]{3}\d{2,4})", re.I)
 _DUE_BIS_RE = re.compile(
-    r"bis(?:\s*zum)\s*[:#]?\s*(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})", re.I)
+    r"bis(?:\s*zum)\s*[:#]?\s*(\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}|\d{1,2}[A-Za-z]{3}\d{2,4})", re.I)
 _TERM_DAYS_RE = re.compile(
     r"(?:within|innerhalb\s*von|zahlbar\s*in)\s*(\d{1,3})\s*(?:tagen|days|kalendertagen)", re.I)
 _BILL_DAYS_RE = re.compile(r"\b(\d{1,3})\s*(?:tagen|days)\b", re.I)
@@ -298,6 +339,14 @@ _PO_RE = re.compile(
 
 _TAX_LINE_RE = re.compile(r"\b([\d.]+)\s*%\s*([\d.,]+)\b")
 
+_SUMMARY_LABELS = [
+    re.compile(r"\b(total|subtotal|sub[- ]total|summe|gesamt|balance|amount\s*(due|payable)|arvekokku|tasuda|tasumata|kokku|summa|k\w*maksuga|verschuldigd|zu\s*zahlen|betrag\s*zu\s*zahlen|a\s*pagar|montant\s*(?:à\s*payer|du)|saldo\s*a)\b", re.I),
+]
+
+_TAX_LABELS = [
+    re.compile(r"\b(gst|vat|mwst|ust|iva|btw|moms|sst|tax|steuer|k\w*maks|tax)\b", re.I),
+]
+
 
 # ---------------------------------------------------------------- extract ---
 
@@ -428,14 +477,33 @@ def _extract_party(layout: PageLayout, all_text: str, g: Dict[str, str]):
 
 
 def _extract_taxes(header_text: str, footer_text: str, g: Dict[str, str]) -> Tuple[List[TaxItem], str]:
-    """Header taxes from the doc's own tax lines (footer). Returns (tax_items, tax_total)."""
-    txt = footer_text
+    """Header taxes from the doc's own tax lines (footer + table). Returns (tax_items, tax_total)."""
+    txt = footer_text + " " + (header_text or "")
     items = []
     total = ""
     low = txt
+    
+    # First, try to get tax total from explicit labels (most reliable)
+    total = _label_amount(low, _TAX_TOTAL_LABELS)
+    if total:
+        g.setdefault("tax_total", _label_ground(low, _TAX_TOTAL_LABELS))
+    
+    # Pass 1: rate% amount patterns - only near tax labels
     m_rate_amt = list(re.finditer(r"([\d.]+)\s*%", low))
     for m in m_rate_amt:
-        rate = m.group(1)
+        rate_str = m.group(1)
+        try:
+            rate_val = float(rate_str.replace(",", "."))
+        except ValueError:
+            continue
+        # Reasonable tax rate range
+        if rate_val < 0 or rate_val > 30:
+            continue
+        # Check if this % is near a tax label
+        context = low[max(0, m.start() - 60):m.end() + 60].lower()
+        near_tax_label = any(k in context for k in ("vat", "gst", "mwst", "ust", "iva", "btw", "moms", "sst", "steuer", "tax", "kaibemaks", "moms", "k.maks", "mva"))
+        if not near_tax_label:
+            continue
         tail = low[m.end():m.end() + 48]
         am = re.search(r"([\d][\d.,]{1,15})", tail)
         if not am:
@@ -443,8 +511,15 @@ def _extract_taxes(header_text: str, footer_text: str, g: Dict[str, str]) -> Tup
         amt = _clean_amt(am.group(1))
         if amt is None:
             continue
+        # Reject amounts that are clearly not tax amounts (too large, or match subtotal/gross)
+        try:
+            amt_val = float(amt.replace(",", "."))
+        except ValueError:
+            continue
+        if amt_val > 1000000:  # unlikely tax amount
+            continue
         label = tail[:am.start()].strip(" :.\t\n-")
-        if not label and len(rate) > 4:
+        if not label and len(rate_str) > 4:
             continue
         snippet = low[max(0, m.start() - 48):m.end() + 48]
         low2 = (label + " " + snippet).lower()
@@ -458,17 +533,51 @@ def _extract_taxes(header_text: str, footer_text: str, g: Dict[str, str]) -> Tup
                 break
         t = TaxItem()
         t.tax_type = tax_type
-        t.tax_name = label or ("%s %s%%" % (tax_type, rate))
+        t.tax_name = label or ("%s %s%%" % (tax_type, rate_str))
         rc = ("reverse charge" in low2 or "umkehr" in low2 or
               ("0%" in low2 and "nicht steuerbar" not in low2 and tax_type == "VAT" and _looks_rc(txt)))
         if rc:
             t.tax_name = "Reverse Charge"
-        t.tax_rate = str(Decimal(rate.replace(",", "."))).rstrip("0").rstrip(".") if rate else ""
+        t.tax_rate = str(Decimal(rate_str.replace(",", "."))).rstrip("0").rstrip(".") if rate_str else ""
         if t.tax_rate == "0":
             t.tax_rate = "0.00"
         t.tax_amount = amt
         items.append(t)
         g.setdefault("taxes", m.group(0))
+    
+# Pass 2: tax labels with amounts (no explicit %) - e.g., "GST $52.00"
+    # Only run if Pass 1 found nothing, to avoid duplicating rate-based taxes
+    # Search footer only - tax labels with amounts typically appear in tax summary
+    if not items:
+        low_footer = footer_text.lower()
+        for m in re.finditer(r"\b(gst|vat|mwst|ust|iva|btw|moms|sst|tax|steuer|k\w*maks|tax)\b", low_footer, re.I):
+            label = m.group(0)
+            tail = low_footer[m.end():m.end() + 64]
+            # Find amount after label (may have currency symbol)
+            # Only match amounts that look like tax amounts (not subtotals/totals)
+            am = re.search(r"[\$\�\�]?\s*([\d][\d.,]{1,15})", tail)
+            if not am:
+                continue
+            amt = _clean_amt(am.group(1))
+            if amt is None:
+                continue
+            low2 = m.group(0).lower()
+            tax_type = "VAT"
+            for k, ty in (("nhil", "NHIL"), ("getfl", "GETFL"), ("getfund", "GETFL"),
+                          ("covid", "COVID"), ("withhold", "WHT"), ("wht", "WHT"),
+                          ("sst", "SST"), ("gst", "GST"), ("moms", "MOMS"), ("iva", "IVA"),
+                          ("taxe", "VAT"), ("mwst", "VAT"), ("ust", "VAT"), ("uso", "USE"), ("nicht steuerbar", "NP")):
+                if k in m.group(0).lower():
+                    tax_type = ty
+                    break
+            t = TaxItem()
+            t.tax_type = tax_type
+            t.tax_name = m.group(0).upper()
+            t.tax_rate = ""
+            t.tax_amount = amt
+            items.append(t)
+            g.setdefault("taxes", m.group(0))
+    
     if not items:
         m = _TAX_LINE_RE.search(low)
         if m:
@@ -477,21 +586,119 @@ def _extract_taxes(header_text: str, footer_text: str, g: Dict[str, str]) -> Tup
             t.tax_amount = _clean_amt(m.group(2))
             items.append(t)
             g.setdefault("taxes", m.group(0))
-    total = _label_amount(low, _TAX_TOTAL_LABELS)
-    if total:
-        g.setdefault("tax_total", _label_ground(low, _TAX_TOTAL_LABELS))
+    
     if not total:
         s = Decimal("0")
         for t in items:
             if t.tax_amount:
                 s += Decimal(t.tax_amount)
         total = quantize_2(s) if s else ""
-    return items, total
+    
+    # Filter items: keep only reasonable tax amounts and rates
+    filtered = []
+    for t in items:
+        try:
+            amt_val = float(t.tax_amount.replace(",", ".")) if t.tax_amount else 0
+            rate_val = float(t.tax_rate.replace(",", ".")) if t.tax_rate else 0
+        except ValueError:
+            continue
+        # Reasonable tax: rate 0-30%, amount < 1000000, and amount <= total (if total known)
+        if rate_val < 0 or rate_val > 30:
+            continue
+        if amt_val > 1000000:
+            continue
+        if total and amt_val > float(total) * 2:  # tax can't be 2x the total
+            continue
+        filtered.append(t)
+    
+    return filtered, total
 
 
 def _looks_rc(txt: str) -> bool:
     """A 0% German/Swiss 'MwSt' line inside a genuine invoice = reverse charge."""
     return bool(re.search(r"(?:zzgl|net|plus)\S?\s*\d*\s*0\s*%", txt, re.I)) or False
+
+
+def _is_pure_tax_label(desc: str) -> bool:
+    """Check if description is primarily a tax label (not a subtotal/total)."""
+    if not desc:
+        return False
+    low = desc.lower().strip()
+    # Must match tax label
+    if not any(pat.search(low) for pat in _TAX_LABELS):
+        return False
+    # Exclude if it's clearly a subtotal/total label
+    for pat in _SUMMARY_LABELS:
+        if pat.search(low):
+            return False
+    return True
+
+
+def _extract_table_taxes(table: Table, g: Dict[str, str]) -> List[TaxItem]:
+    """Extract tax rows from table: rows with tax labels (GST, VAT, etc.) in description
+    and amount in a money column."""
+    if table is None:
+        return []
+    items = []
+    header = table.header_row
+    for r in sorted(table.rows):
+        if header is not None and r == header:
+            continue
+        desc = table.cell(r, Table.DESCR)
+        if not desc or not _is_pure_tax_label(desc):
+            continue
+        # Find amount in money columns for this row
+        amt = ""
+        for c in table.columns:
+            if c.index in table.money_cols:
+                val = table.cell(r, c.index)
+                a = _money_token(val)
+                if a is not None:
+                    amt = str(a)
+                    break
+        if not amt:
+            continue
+        low = desc.lower()
+        tax_type = "VAT"
+        for k, ty in (("nhil", "NHIL"), ("getfl", "GETFL"), ("getfund", "GETFL"),
+                      ("covid", "COVID"), ("withhold", "WHT"), ("wht", "WHT"),
+                      ("sst", "SST"), ("gst", "GST"), ("moms", "MOMS"), ("iva", "IVA"),
+                      ("taxe", "VAT"), ("mwst", "VAT"), ("ust", "VAT"), ("uso", "USE"), ("nicht steuerbar", "NP")):
+            if k in desc.lower():
+                tax_type = ty
+                break
+        t = TaxItem()
+        t.tax_type = tax_type
+        t.tax_name = desc.strip()
+        t.tax_rate = ""
+        t.tax_amount = amt
+        items.append(t)
+    return items
+
+def _is_tax_label(desc: str) -> bool:
+    if not desc:
+        return False
+    low = desc.lower().strip()
+    return any(pat.search(low) for pat in _TAX_LABELS)
+
+def _is_summary_row(desc: str, qty: str, unit: str, total: str) -> bool:
+    """Detect summary/total rows that should not be line items."""
+    if not desc:
+        return False
+    low = desc.lower()
+    # Summary keywords in description
+    if any(pat.search(low) for pat in _SUMMARY_LABELS):
+        return True
+    # Tax lines are not summaries (they have tax labels like GST, VAT, etc.)
+    if _is_tax_label(desc):
+        return False
+    # No quantity but has total = summary row (unless it's a tax label)
+    if not qty and total:
+        return True
+    # No meaningful data
+    if not qty and not unit and not total:
+        return True
+    return False
 
 
 def _extract_line_items(table: Table, g: Dict[str, str]) -> List[LineItemExt]:
@@ -508,6 +715,10 @@ def _extract_line_items(table: Table, g: Dict[str, str]) -> List[LineItemExt]:
         u = table.cell(r, roles["unit"]) if roles["unit"] >= 0 else ""
         t = table.cell(r, roles["total"]) if roles["total"] >= 0 else ""
         d = table.cell(r, roles["discount"]) if roles["discount"] >= 0 else ""
+        if _is_summary_row(desc, q, u, t):
+            continue
+        if _is_tax_label(desc):
+            continue
         li = LineItemExt(description=desc, row_n=r)
         qty_d = None
         if q:
@@ -536,6 +747,102 @@ def _extract_line_items(table: Table, g: Dict[str, str]) -> List[LineItemExt]:
             li.item_type = _item_type(li.description)
         li.raw = " ".join(x[1] for x in table.rows.get(r, {}).get(Table.DESCR, []))
         items.append(li)
+    return items
+
+
+def _extract_line_items_from_text(layout: PageLayout, g: Dict[str, str]) -> List[LineItemExt]:
+    """Fallback: extract line items from footer text lines.
+    Matches patterns like: '1x Description QTY UNIT_PRICE TOTAL' or 'Qty Description Unit Total'"""
+    items = []
+    # Pattern: optional quantity x, description, optional quantity, unit price, total
+    # e.g., "1x AktivkolarVeritas8000komplekt 24 tundi 103,60 103,60"
+    #       "2x AktivkolarNOVAVeritas12 24 tundi E20,00"
+    #       "1x Linnasisenetransport Fikseeritud E50,00 50,00"
+    # Handles currency prefix (E, €, $, etc.) before unit price
+    # Total is optional (some lines only have unit price when qty=1)
+    line_pattern = re.compile(
+        r"^(\d+)x\s+(.+?)\s+(\d+(?:[.,]\d+)?)\s+(?:tundi|hrs?|hours?|units?|pcs?|stk|stueck)?\s*[€$£E]?\s*([\d.,]+)?\s*([\d.,]+)?$",
+        re.I
+    )
+    # Alternative: "1x Description Fixed E50,00 50,00" or "1x Description Fikseeritud E50,00 50,00"
+    line_pattern2 = re.compile(
+        r"^(\d+)x\s+(.+?)\s+(?:Fixed|Fikseeritud)\s*[€$£E]?\s*([\d.,]+)\s*([\d.,]+)$",
+        re.I
+    )
+    # Pattern without x: "Qty Description UnitPrice Total"
+    line_pattern3 = re.compile(
+        r"^(\d+(?:[.,]\d+)?)\s+(.+?)\s*[€$£E]?\s*([\d.,]+)\s*([\d.,]+)$",
+        re.I
+    )
+
+    patterns = [line_pattern, line_pattern2, line_pattern3]
+
+    # Process individual footer lines (not joined footer_text)
+    for ln in layout.footer_lines:
+        line = ln.text.strip()
+        if not line:
+            continue
+        # Skip summary/tax/total lines
+        low = line.lower()
+        if any(kw in low for kw in ("vahesumma", "summa", "kaibemaks", "allahindlus", "tasumata", "subtotal", "total", "vat", "tax", "mwst", "discount", "rabatt")):
+            continue
+
+        for pat in patterns:
+            m = pat.search(line)
+            if m:
+                groups = m.groups()
+                if pat == line_pattern:
+                    qty_str, desc, qty2, unit_price, total = groups
+                    qty_d = _money_token(qty_str)
+                    if qty_d is None:
+                        continue
+                    li = LineItemExt(description=desc.strip())
+                    li.quantity = str(qty_d)
+                    if unit_price:
+                        a = _money_token(unit_price)
+                        if a is not None:
+                            li.unit_price = str(a)
+                    if total:
+                        a = _money_token(total)
+                        if a is not None:
+                            li.total = str(a)
+                    elif li.unit_price and qty_d:
+                        li.total = quantize_2(Decimal(li.unit_price) * qty_d)
+                    li.item_type = _item_type(li.description)
+                    items.append(li)
+                    break
+                elif pat == line_pattern2:
+                    qty_str, desc, unit_price, total = groups
+                    qty_d = _money_token(qty_str)
+                    if qty_d is None:
+                        continue
+                    li = LineItemExt(description=desc.strip())
+                    li.quantity = str(qty_d)
+                    a = _money_token(unit_price)
+                    if a is not None:
+                        li.unit_price = str(a)
+                    a = _money_token(total)
+                    if a is not None:
+                        li.total = str(a)
+                    li.item_type = _item_type(li.description)
+                    items.append(li)
+                    break
+                elif pat == line_pattern3:
+                    qty_str, desc, unit_price, total = groups
+                    qty_d = _money_token(qty_str)
+                    if qty_d is None:
+                        continue
+                    li = LineItemExt(description=desc.strip())
+                    li.quantity = str(qty_d)
+                    a = _money_token(unit_price)
+                    if a is not None:
+                        li.unit_price = str(a)
+                    a = _money_token(total)
+                    if a is not None:
+                        li.total = str(a)
+                    li.item_type = _item_type(li.description)
+                    items.append(li)
+                    break
     return items
 
 
@@ -732,21 +1039,58 @@ def extract(layout: PageLayout) -> ExtractedDoc:
         for li in doc.line_items:
             if li.unit_price and li.quantity:
                 line_sum += (_money_token(li.unit_price) or Decimal(0)) * (_money_token(li.quantity) or Decimal(0))
+    
+    # Fallback: if table extraction yielded poor results (items missing quantities/unit prices/totals),
+    # try extracting line items from footer text
+    if layout.table and doc.gross:
+        try:
+            gross_val = Decimal(doc.gross)
+            # Check if table items are well-formed (have qty, unit_price, total)
+            well_formed = sum(1 for li in doc.line_items 
+                            if li.quantity and li.unit_price and li.total)
+            if well_formed < len(doc.line_items) * 0.5:  # less than 50% well-formed
+                text_items = _extract_line_items_from_text(layout, g)
+                if text_items:
+                    text_well_formed = sum(1 for li in text_items 
+                                         if li.quantity and li.unit_price and li.total)
+                    if text_well_formed > well_formed:
+                        doc.line_items = text_items
+                        line_sum = sum((Decimal(li.total) if li.total and _money_token(li.total) is not None
+                                        else Decimal(0)) for li in doc.line_items)
+        except Exception:
+            pass
 
-    # taxes ---------------------------------------------------------------
-    doc.taxes, tax_total_line = _extract_taxes(header_text + " " + table_words, footer_text, g)
+    # taxes from table rows (structured) ------------------------------------
+    table_taxes = _extract_table_taxes(layout.table, g) if layout.table else []
+    # taxes from text (header/footer only - NOT table words) ---------------
+    text_taxes, tax_total_line = _extract_taxes(header_text, footer_text, g)
+    # merge: prefer table taxes (more structured), then text taxes
+    # Deduplicate by (tax_name, tax_rate, tax_amount)
+    seen_tax = set()
+    doc.taxes = []
+    for t in table_taxes:
+        key = (t.tax_name.upper(), t.tax_rate, t.tax_amount)
+        if key not in seen_tax:
+            seen_tax.add(key)
+            doc.taxes.append(t)
+    for t in text_taxes:
+        key = (t.tax_name.upper(), t.tax_rate, t.tax_amount)
+        if key not in seen_tax:
+            seen_tax.add(key)
+            doc.taxes.append(t)
     # totals --------------------------------------------------------------
     gross, sub, tax_total, disc, freight = _extract_totals(header_text, footer_text, line_sum, doc.taxes, g)
 
-    def _numish(s: str) -> str:
-        return s if s is not None and re.fullmatch(r"[+-]?\d+([.,]\d+)?", str(s).strip()) else ""
+    doc.gross = _numish(gross)
+    doc.subtotal = _numish(sub)
+    doc.tax_total = _numish(tax_total)
+    doc.discount_amount = _numish(disc)
+    doc.freight_charges = _numish(freight)
+    doc.insurance_charges = ""
+    doc.extra_charges = ""
+    doc.excise_duties = ""
 
-    gross = _numish(gross)
-    sub = _numish(sub)
-    tax_total = _numish(tax_total)
-    disc = _numish(disc)
-    freight = _numish(freight)
-    doc.gross = gross
+    return doc
     doc.subtotal = sub
     doc.tax_total = tax_total
     doc.discount_amount = disc
@@ -808,7 +1152,10 @@ def extract(layout: PageLayout) -> ExtractedDoc:
     return doc
 
 
+def _numish(s: str) -> str:
+    return s if s is not None and re.fullmatch(r"[+-]?\d+([.,]\d+)?", str(s).strip()) else ""
+
+
 def _first_date(s: str) -> str:
     m = _ANY_DATE_RE.search(s)
     return m.group(1) if m else ""
-

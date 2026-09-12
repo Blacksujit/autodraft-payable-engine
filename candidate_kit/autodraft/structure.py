@@ -26,6 +26,39 @@ from autodraft.normalize import parse_amount
 
 _INTLIKE_RE = re.compile(r"^\d{1,9}(?:[\.,]\d{0,2})?(?:[\sx×X*]+\S.*)?$")
 
+# Summary/total row labels (multilingual) - used to filter out footer summaries from table detection
+_SUMMARY_LABELS = [
+    re.compile(r"\b(kokku|vahesumma|summa|subtotal|sub-total|total|gesamt|balance|amount\s*(due|payable)|arvekokku|tasuda|tasumata|summa|k\w*maksuga|verschuldigd|zu\s*zahlen|betrag\s*zu\s*zahlen|a\s*pagar|montant\s*(?:à\s*payer|du)|saldo\s*a|summe|sum\b)\b", re.I),
+]
+
+_TAX_LABELS = [
+    re.compile(r"\b(gst|vat|mwst|ust|iva|btw|moms|sst|tax|steuer|k\w*maks|tax|kaibemaks|moms)\b", re.I),
+]
+
+
+def _strip_currency(tok: str) -> str:
+    out = []
+    for ch in tok:
+        if ch.isdigit() or ch in ".,-+":
+            out.append(ch)
+    return "".join(out)
+
+
+def _is_summary_label(desc: str) -> bool:
+    """Check if description is a summary/total label."""
+    if not desc:
+        return False
+    low = desc.lower().strip()
+    return any(pat.search(low) for pat in _SUMMARY_LABELS)
+
+
+def _is_tax_label(desc: str) -> bool:
+    """Check if description is a tax label."""
+    if not desc:
+        return False
+    low = desc.lower().strip()
+    return any(pat.search(low) for pat in _TAX_LABELS)
+
 
 def _strip_currency(tok: str) -> str:
     out = []
@@ -242,7 +275,7 @@ def _build_table(rows: List[List[Line]], start: int, end: int, has_header: bool 
     if not columns:
         return None, start - 1
 
-    leftmost_money_band = min(c.center for c in columns)
+    leftmost_money_band = min(c.center for c in columns if c.index in money_cols)
     desc_x1 = leftmost_money_band - tol  # description region boundary
 
     def assign(w: Word) -> Tuple[Optional[int], bool]:
@@ -281,7 +314,7 @@ def _build_table(rows: List[List[Line]], start: int, end: int, has_header: bool 
 
     # description edge = mode of leftmost word x0 among candidate data rows
     # (rows with a money-band word AND a description anchor), header row
-    # excluded
+    # excluded. Exclude pure integer words (likely item codes) and summary rows.
     leftmost = []
     for key, row_map in occupancy.items():
         if key == start:
@@ -290,9 +323,25 @@ def _build_table(rows: List[List[Line]], start: int, end: int, has_header: bool 
             continue
         if not row_map.get(Table.DESCR):
             continue
-        xs = [bx.x0 for bx, _ in row_map[Table.DESCR]]
-        if xs:
-            leftmost.append(min(xs))
+        # Filter out summary/total rows from desc edge computation
+        desc_texts = [tx for _, tx in row_map[Table.DESCR]]
+        combined_desc = " ".join(desc_texts).strip()
+        if _is_summary_label(combined_desc):
+            continue  # Skip footer summary rows
+        # Filter out pure integer tokens (likely item codes) and short codes from desc anchor
+        # Use only words containing letters (actual description text)
+        desc_xs = []
+        for bx, tx in row_map[Table.DESCR]:
+            stripped = tx.strip()
+            if stripped.isdigit():
+                continue
+            # Skip short codes (2-3 chars, all letters like "YM", "KG", "PC")
+            if len(stripped) <= 3 and stripped.isalpha():
+                continue
+            if any(c.isalpha() for c in stripped):
+                desc_xs.append(bx.x0)
+        if desc_xs:
+            leftmost.append(min(desc_xs))
     if not leftmost:
         return None, start - 1
     # tolerance-aware mode: cluster candidates, take the densest cluster

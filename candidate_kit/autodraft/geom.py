@@ -26,6 +26,10 @@ class Box:
     def h(self) -> float:
         return self.y1 - self.y0
 
+    # Aliases for test compatibility
+    width = property(lambda self: self.w)
+    height = property(lambda self: self.h)
+
     @property
     def cx(self) -> float:
         return (self.x0 + self.x1) / 2.0
@@ -40,6 +44,19 @@ class Box:
 
     def overlap_y(self, other: "Box", tol: float = 0.0) -> float:
         return max(0.0, min(self.y1, other.y1) - max(self.y0, other.y0) + tol)
+
+    def overlaps(self, other: "Box", tol: float = 0.0) -> bool:
+        """Check if boxes overlap (alias for intersects)."""
+        return self.intersects(other, tol, tol)
+
+    def contains(self, other: "Box", tol: float = 0.0) -> bool:
+        """Check if this box contains another box."""
+        return (
+            self.x0 - tol <= other.x0
+            and self.y0 - tol <= other.y0
+            and self.x1 + tol >= other.x1
+            and self.y1 + tol >= other.y1
+        )
 
     def union_with(self, other: "Box") -> "Box":
         return Box(
@@ -98,6 +115,13 @@ class Line:
     def text(self) -> str:
         words = sorted(self.words, key=lambda w: w.box.x0)
         return " ".join(w.text for w in words)
+
+    @property
+    def y_center(self) -> float:
+        """Vertical center of the line."""
+        if not self.words:
+            return 0.0
+        return sum(w.box.cy for w in self.words) / len(self.words)
 
     def tokens(self) -> List[Tuple[Box, str]]:
         return [(w.box, w.text) for w in sorted(self.words, key=lambda w: w.box.x0)]

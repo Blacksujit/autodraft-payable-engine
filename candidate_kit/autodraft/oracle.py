@@ -71,7 +71,8 @@ def _tax_dict(t) -> dict:
 
 
 def _li_dict(li: LineItemExt, taxes: List[TaxItem]) -> dict:
-    return {
+    has_taxes = bool(taxes)
+    d = {
         "description": _s(li.description),
         "item_type": li.item_type or "",
         "uom": _s(li.uom),
@@ -80,10 +81,11 @@ def _li_dict(li: LineItemExt, taxes: List[TaxItem]) -> dict:
         "total": _s(li.total),
         "discount": _s(li.discount),
         "discount_percentage": _s(li.discount_percentage),
-        "tax_rate": _s(li.tax_rate),
-        "tax_amount": _s(li.tax_amount),
-        "taxes": [_tax_dict(t) for t in taxes],
+        "tax_rate": "" if has_taxes else _s(li.tax_rate),
+        "tax_amount": "" if has_taxes else _s(li.tax_amount),
+        "taxes": [_tax_dict(t) for t in taxes] if has_taxes else [],
     }
+    return d
 
 
 def _base_payable(doc: ExtractedDoc) -> dict:
@@ -205,6 +207,7 @@ def _variant_solo_total(doc: ExtractedDoc) -> dict:
     p = _variant_keep(doc)
     p["line_items"][0]["unit_price"] = li.total
     p["line_items"][0]["quantity"] = "1"
+    p["line_items"][0]["total"] = li.total
     return p
 
 
@@ -218,6 +221,7 @@ def _variant_solo_gross(doc: ExtractedDoc) -> dict:
     p = _variant_keep(doc)
     p["line_items"][0]["unit_price"] = doc.gross
     p["line_items"][0]["quantity"] = "1"
+    p["line_items"][0]["total"] = doc.gross
     return p
 
 
@@ -319,9 +323,8 @@ def build_payable(doc: ExtractedDoc, declined_reason: str = "") -> dict:
         target = abs(target)
     for name, p in variants:
         if _matches(p, target):
-                _fill_totals(p)
-            p["gross_total"] = _fmt2(target)
             _fill_totals(p)
+            p["gross_total"] = _fmt2(target)
             p["_placement"] = name
             return p
 

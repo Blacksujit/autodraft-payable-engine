@@ -178,6 +178,16 @@ _DATE_RE = re.compile(
     r"\b(\d{1,4})[\-\./](\d{1,2})[\-\./](\d{1,4})\b"
 )
 
+# Additional pattern for formats like "30Apr2025", "31May2025"
+_DATE_ALPHA_RE = re.compile(
+    r"\b(\d{1,2})(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(\d{2,4})\b", re.I
+)
+
+_MONTH_MAP = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+    "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+}
+
 
 @dataclass
 class DateResolved:
@@ -191,6 +201,24 @@ def parse_date(token: str, locale_hint: str = "", context: str = "") -> Optional
     token itself and, when still ambiguous, from label semantics passed in
     `context` (e.g. a label word like 'invoice date' means the US mm/dd is
     plausible only for US suppliers) — never guessed without a signal."""
+    
+    # Try alpha month format first (e.g., "30Apr2025", "31May2025")
+    m_alpha = _DATE_ALPHA_RE.search(token.strip())
+    if m_alpha:
+        day = int(m_alpha.group(1))
+        month_str = m_alpha.group(2).lower()[:3]
+        year_str = m_alpha.group(3)
+        month = _MONTH_MAP.get(month_str)
+        if month:
+            year = int(year_str)
+            if year < 100:
+                year = 2000 + year if (2000 + year) <= 2050 else 1900 + year
+            try:
+                iso = f"{year:04d}-{month:02d}-{day:02d}"
+                return DateResolved(iso, token)
+            except ValueError:
+                pass
+    
     m = _DATE_RE.search(token.strip())
     if m is None:
         return None

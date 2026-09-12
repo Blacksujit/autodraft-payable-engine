@@ -1,0 +1,51 @@
+## Phase 4 — Local-LLM consult layer (L)
+
+13. Ollama backend protocol + `llama3.2` text consult for doc-type and
+    field-binding on low-confidence pages only.
+14. Vision escalation: `moondream` → `llava:7b` for pathological scans, used
+    as *evidence re-phraser* only (core re-extracts; LLM numbers never enter
+    the record).
+
+**G4** — Pages that previously failed G3 now either book (verified) or decline
+*faster* with a sharper reason; total added correctness measured, not assumed.
+
+---
+
+## Phase 5 — Generalisation & held-back posture (D+L)
+
+15. Adversarial sweep: hand-build 10 synthetic "never-seen" docs (new languages,
+    unusual column orders, mixed separators, multi-invoice, credit cues,
+    ambiguous dates, absent PO, unknown supplier) and require the *same*
+    machinery — no special cases — to handle each honestly.
+16. The one *provably unsolvable* doc (brief's promise): confirm no page could
+    support the answer, and document in `DESIGN.md` the refusal.
+
+**G5** — Synthetic-set distance ≤ small; refusal reasons are diagnostic.
+
+---
+
+## Phase 6 — Release packaging + DESIGN.md
+
+17. `output/*.json` for all 43 files, re-runnable in one command.
+18. `DESIGN.md` (≤3 pages) answering the brief's three questions honestly.
+19. README (system run instructions) + final verification sweep.
+
+**G6** — `python -m autodraft documents output` is reproducible from a clean
+state; graduated format: passing per-doc report in hand.
+
+---
+
+## Tracked risks (revisit at each gate)
+
+- **Mixed number locales within one doc** (seen already) — handled in
+  `normalize.py` per-number; watch for the inverse (`1,234.56`).
+- **Multi-payable files** — the ORCAd multi-`payables[]` contract is exercised
+  first on `DU-*`.
+- **Vision-model latency** on 12-core CPU — moondream is ~1.7 GB; llava 7B
+  slow; escalation is bounded to pages that *need* it.
+- **Transformers/torchvision drift** — torchvision is broken (0.2.0); we do
+  **not** depend on transformers-vision at all. Text-only transformers unused
+  too: Ollama covers the LLM layer with zero pip friction.
+- **`winsdk` unavailable on py3.14** — Windows built-in OCR is not used;
+  RapidOCR is the single OCR path (simpler, and identical behaviour on the
+  held-back set).

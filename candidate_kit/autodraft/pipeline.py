@@ -57,20 +57,49 @@ def _extract_doc(pdf_path: str):
     if not extracts:
         return None, []
 
-    ext = extracts[0]
-    for subsequent in extracts[1:]:
-        ext.line_items.extend(subsequent.line_items)
+    # Identify the primary page (first page with line items) and summary pages
+    primary_ext = None
+    for ext in extracts:
+        if ext.line_items and any(li.description and li.total for li in ext.line_items):
+            primary_ext = ext
+            break
+    
+    if primary_ext is None:
+        primary_ext = extracts[0]
+    
+    # Collect line items from all pages, but filter out summary rows
+    all_line_items = []
+    for ext in extracts:
+        for li in ext.line_items:
+            # Skip summary/total rows
+            desc = (li.description or "").lower().strip()
+            if any(kw in desc for kw in ("delivery cost", "vatamount", "currency code", "subtotal", "sub total", "total inc", "total ex", "amount due", "balance due", "total due", "zu zahlen", "betrag", "payment due", "payable", "netto", "brutto", "arvekokku", "tasuda", "tasumata", "kokku", "summa", "verschuldigd", "a pagar", "montant", "saldo")):
+                continue
+            if not li.description or (not li.quantity and not li.unit_price and not li.total):
+                continue
+            all_line_items.append(li)
 
+    # Deduplicate line items (more robust key)
     _dedupe_extras = {}
     unique_lines = []
-    for li in ext.line_items:
-        key = (li.description, str(li.quantity), str(li.unit_price), str(li.total))
+    for li in all_line_items:
+        # Normalize for comparison
+        key = (
+            (li.description or "").strip().lower(),
+            str(li.quantity).strip() if li.quantity else "",
+            str(li.unit_price).strip() if li.unit_price else "",
+            str(li.total).strip() if li.total else ""
+        )
         if key in _dedupe_extras:
             continue
         _dedupe_extras[key] = True
         unique_lines.append(li)
+
+    # Use the first extract as base, but replace line_items
+    ext = extracts[0]
     ext.line_items = unique_lines
 
+    # Merge totals from the page that has the gross (prefer last page with gross)
     for candidate in reversed(extracts):
         if candidate.gross:
             ext.gross = candidate.gross
@@ -81,6 +110,7 @@ def _extract_doc(pdf_path: str):
             ext.page_text = candidate.page_text
             break
 
+    # Merge taxes (deduplicate by rate+amount+type)
     seen_tax = set()
     merged_taxes = []
     for e in extracts:
@@ -104,10 +134,121 @@ def process_pdf(pdf_path: str, output_dir: str = "") -> dict:
     return result
 
 
+def _extract_du_pages(pdf_path: str):
+    """Extract each page of a DU-* document separately, returning one ExtractedDoc per page."""
+    import pymupdf
+    doc = pymupdf.open(pdf_path)
+    page_count = len(doc)
+    doc.close()
+    for pg in range(page_count):
+        _render_page(pdf_path, pg)
+
+    extracts = []
+    for pg in range(page_count):
+        pp = WORK_DIR / f"{Path(pdf_path).stem}_p{pg+1}.png"
+        if not pp.exists():
+            continue
+        words = ocr_words(str(pp))
+        if not words:
+            continue
+        layout = build_layout(str(pp), pg, words)
+        ext = extract(layout)
+        ext.path = pdf_path
+        ext.page_index = pg
+        extracts.append(ext)
+
+    return extracts
+
+
+def _process_du_document(pdf_path: str):
+    """Process a DU-* document: split by invoice number, create one payable per invoice."""
+    stem = Path(pdf_path).stem
+    extracts = _extract_du_pages(pdf_path)
+    if not extracts:
+        return {"file": stem + ".pdf", "payables": [], "declined": [{"doc_type": "CUSTOMS_INVOICE", "reason": "No extractable pages"}], "invoice_number": ""}
+
+    # Group extracts by invoice number
+    by_invoice = {}
+    for ext in extracts:
+        inv = ext.invoice_number or "unknown"
+        by_invoice.setdefault(inv, []).append(ext)
+
+    all_payables = []
+    all_declined = []
+
+    for inv_num, inv_extracts in by_invoice.items():
+        if inv_num == "unknown" or not inv_num.strip():
+            # No invoice number - skip or decline
+            continue
+
+        # Merge extracts for this invoice (usually just one page per invoice)
+        primary = inv_extracts[0]
+        # Collect line items from all pages of this invoice
+        all_line_items = []
+        for ext in inv_extracts:
+            for li in ext.line_items:
+                desc = (li.description or "").lower().strip()
+                if any(kw in desc for kw in ("delivery cost", "vatamount", "currency code", "subtotal", "sub total", "total inc", "total ex", "amount due", "balance due", "total due", "zu zahlen", "betrag", "payment due", "payable", "netto", "brutto", "arvekokku", "tasuda", "tasumata", "kokku", "summa", "verschuldigd", "a pagar", "montant", "saldo")):
+                    continue
+                if not li.description or (not li.quantity and not li.unit_price and not li.total):
+                    continue
+                all_line_items.append(li)
+
+        # Deduplicate
+        seen = set()
+        unique = []
+        for li in all_line_items:
+            key = ((li.description or "").strip().lower(), str(li.quantity or ""), str(li.unit_price or ""), str(li.total or ""))
+            if key in seen:
+                continue
+            seen.add(key)
+            unique.append(li)
+
+        primary.line_items = unique
+
+        # Use first extract's totals
+        primary.gross = inv_extracts[0].gross
+        primary.subtotal = inv_extracts[0].subtotal
+        primary.tax_total = inv_extracts[0].tax_total
+        primary.discount_amount = inv_extracts[0].discount_amount
+        primary.freight_charges = inv_extracts[0].freight_charges
+        primary.page_text = "\n".join(e.page_text for e in inv_extracts)
+
+        # Merge taxes
+        seen_tax = set()
+        merged = []
+        for e in inv_extracts:
+            for t in e.taxes:
+                key = (t.tax_rate, t.tax_amount, t.tax_type)
+                if key not in seen_tax:
+                    seen_tax.add(key)
+                    merged.append(t)
+        primary.taxes = merged
+
+        primary.doc_type, primary.invoice_type, decline_reason = decide(primary)
+
+        payable = build_payable(primary, decline_reason)
+        running, note = oracle_gate(payable)
+
+        if payable.get("_declined"):
+            all_declined.append({"doc_type": payable["doc_type"], "reason": payable["reason"]})
+        else:
+            payable.pop("_placement", None)
+            all_payables.append(payable)
+
+    return {"file": stem + ".pdf", "payables": all_payables, "declined": all_declined, "invoice_number": ""}
+
+
 def process_pdf_detail(pdf_path: str):
     """Run the full pipeline and also return (ext, raw_payable, placement, note)
     for the fidelity/grounding audit.   traversal order = emitted result."""
     stem = Path(pdf_path).stem
+    
+    # Special handling for DU-* documents (customs consolidated invoices)
+    if stem.startswith("DU-"):
+        result = _process_du_document(pdf_path)
+        return result, None, None, None, None
+
     ext, page_texts = _extract_doc(pdf_path)
     if ext is None:
         return {"error": "no_pages", "invoice_number": "", "declined": []}, None, None, None, None
