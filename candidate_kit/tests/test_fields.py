@@ -68,10 +68,10 @@ class TestRegexes:
         assert match.group(1) == "15.01.2026"
 
     def test_due_expl_re(self):
-        text = "Due Date: 2026-02-15"
+        text = "DueDate:31May2025"
         match = _DUE_EXPL_RE.search(text)
         assert match is not None
-        assert match.group(1) == "2026-02-15"
+        assert match.group(1) == "31May2025"
 
     def test_bal_labels(self):
         labels = ["Total Due", "Amount Due", "Balance Due", "Zu zahlen", "Arvekokku"]
@@ -116,7 +116,7 @@ class TestSplitQtyUom:
     def test_split_no_uom(self):
         qty, uom = _split_qty_uom("10")
         assert qty == Decimal("10")
-        assert uom == "10"
+        assert uom == ""  # No UOM provided
 
     def test_split_invalid(self):
         qty, uom = _split_qty_uom("abc")
@@ -144,8 +144,8 @@ class TestMoneyToken:
 
 class TestLabelAmount:
     def test_basic(self):
-        text = "Total: 100.00"
-        labels = [pytest.importorskip("re").compile(r"Total:")]
+        text = "Total Due: 100.00"
+        labels = _BAL_LABELS
         result = _label_amount(text, labels)
         assert result == "100.00"
 

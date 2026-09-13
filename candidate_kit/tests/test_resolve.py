@@ -37,18 +37,18 @@ class TestScoreName:
 
 class TestResolveSupplier:
     def test_exact_name_match(self):
-        result = resolve_supplier("Northwind Operations OU", "", "EUR")
+        result = resolve_supplier("Phocus Direct Communication GmbH", "", "EUR")
         assert result["id"] != ""
-        assert result["name"] == "Northwind Operations OU"
+        assert result["name"] == "Phocus Direct Communication GmbH"
 
     def test_vat_match(self):
-        result = resolve_supplier("", "EE398766194", "EUR")
+        result = resolve_supplier("", "DE209177122", "EUR")
         assert result["id"] != ""
-        assert result["vat_id"] == "EE398766194"
+        assert result["vat_id"] == "DE209177122"
 
     def test_partial_name_match(self):
-        result = resolve_supplier("Northwind", "", "EUR")
-        # Should find Northwind Operations OU
+        result = resolve_supplier("Phocus", "", "EUR")
+        # Should find Phocus Direct Communication GmbH
         assert result["id"] != ""
 
     def test_no_match(self):
@@ -119,7 +119,7 @@ class TestResolveTaxes:
         
         assert len(result) == 1
         assert result[0]["tax_type"] == "VAT"
-        assert result[0]["tax_rate"] == "20"
+        assert result[0]["tax_rate"] == "20.00"
 
     def test_resolve_zero_rate(self):
         from autodraft.fields import TaxItem

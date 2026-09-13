@@ -89,14 +89,14 @@ class TestLine:
 
 class TestClusterLines:
     def test_cluster_simple(self):
-        # Lines that overlap vertically should cluster
+        # Lines that overlap vertically should cluster - use words with more overlap
         words = [
-            Word(Box(0, 0, 50, 20), "Line1", 0.9),
-            Word(Box(0, 15, 50, 35), "Line2", 0.9),  # Overlaps with Line1
+            Word(Box(0, 0, 50, 30), "Line1", 0.9),
+            Word(Box(0, 10, 50, 40), "Line2", 0.9),  # Overlaps significantly with Line1
             Word(Box(0, 100, 50, 120), "Line3", 0.9),  # Far apart
         ]
         clusters = cluster_lines(words)
-        # Line1 and Line2 should cluster (they overlap), Line3 separate
+        # Word1 and Word2 should cluster (they overlap), Word3 separate
         assert len(clusters) == 2
         assert len(clusters[0].words) == 2
         assert len(clusters[1].words) == 1

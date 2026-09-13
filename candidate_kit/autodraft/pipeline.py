@@ -249,7 +249,14 @@ def process_pdf_detail(pdf_path: str):
         result = _process_du_document(pdf_path)
         return result, None, None, None, None
 
-    ext, page_texts = _extract_doc(pdf_path)
+    try:
+        ext, page_texts = _extract_doc(pdf_path)
+    except FileNotFoundError:
+        return {"error": "file_not_found", "invoice_number": "", "declined": []}, None, None, None, None
+    except Exception as e:
+        # Handle invalid PDF files and other errors
+        return {"error": f"pdf_error: {str(e)}", "invoice_number": "", "declined": []}, None, None, None, None
+    
     if ext is None:
         return {"error": "no_pages", "invoice_number": "", "declined": []}, None, None, None, None
 

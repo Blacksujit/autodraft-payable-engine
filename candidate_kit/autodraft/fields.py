@@ -258,7 +258,8 @@ def _clean_amt(tok: str) -> Optional[str]:
         return None
     if a.ambiguous and not re.fullmatch(r"[+-]?\d+[.,]\d{2}", tok):
         return None
-    v = str(a.value)
+    # Preserve 2 decimal places
+    v = str(a.value.quantize(Decimal("0.01")))
     if neg and not v.startswith("-"):
         v = "-" + v
     return v
@@ -689,10 +690,13 @@ def _is_summary_row(desc: str, qty: str, unit: str, total: str) -> bool:
     # Summary keywords in description
     if any(pat.search(low) for pat in _SUMMARY_LABELS):
         return True
+    # Tax lines with totals but no quantities are summary rows (tax totals)
+    if _is_tax_label(desc) and total and not qty:
+        return True
     # Tax lines are not summaries (they have tax labels like GST, VAT, etc.)
     if _is_tax_label(desc):
         return False
-    # No quantity but has total = summary row (unless it's a tax label)
+    # No quantity but has total = summary row
     if not qty and total:
         return True
     # No meaningful data
@@ -774,8 +778,14 @@ def _extract_line_items_from_text(layout: PageLayout, g: Dict[str, str]) -> List
         r"^(\d+(?:[.,]\d+)?)\s+(.+?)\s*[€$£E]?\s*([\d.,]+)\s*([\d.,]+)$",
         re.I
     )
+    # Pattern: Description Qty/Unit UnitPrice Total (e.g., "Description 1/1 EA 39.99 39.99")
+    # Description can contain spaces, Qty/Unit like "1/1 EA", "2/2 EA", "1/1"
+    line_pattern4 = re.compile(
+        r"^(.+?)\s+(\d+/\d+(?:\s+\w+)?)?\s*[€$£E]?\s*([\d.,]+)\s*([\d.,]+)$",
+        re.I
+    )
 
-    patterns = [line_pattern, line_pattern2, line_pattern3]
+    patterns = [line_pattern, line_pattern2, line_pattern3, line_pattern4]
 
     # Process individual footer lines (not joined footer_text)
     for ln in layout.footer_lines:

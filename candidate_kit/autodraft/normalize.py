@@ -104,13 +104,18 @@ def parse_amount(token: str) -> Optional[Amount]:
     if not s:
         return None
     
+    # Strip leading currency symbols and other non-numeric prefix
+    # Keep only leading sign (+/-) and digits/separators
+    s = re.sub(r'^[^+\-\d]*', '', s)
+    if not s:
+        return None
+    
     # Check for negative sign
     neg = s.lstrip().startswith("-")
     if neg:
         s = s.lstrip()[1:]  # Remove the minus sign
     
     # Find the numeric part using regex
-    import re
     m = re.search(r'[-+]?\d[\d.,]*', s)
     if not m:
         return None

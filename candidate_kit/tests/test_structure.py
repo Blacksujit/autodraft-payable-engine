@@ -36,9 +36,10 @@ class TestAmountValue:
         assert amount_value("-50.25") == -50.25
 
     def test_parse_with_currency(self):
-        assert amount_value("$100") == 100.0
-        assert amount_value("€100,50") == 100.50
-        assert amount_value("£1,234.56") == 1234.56
+        from decimal import Decimal
+        assert amount_value("\u20ac100") == Decimal("100")
+        assert amount_value("\u20ac100,50") == Decimal("100.50")
+        assert amount_value("\u00a31,234.56") == Decimal("1234.56")
 
     def test_parse_invalid(self):
         assert amount_value("abc") is None

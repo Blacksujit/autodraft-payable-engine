@@ -77,6 +77,17 @@ def clean_numeric(tok: str) -> bool:
         return False
     if any(ch.isalpha() for ch in tok):
         return False
+    # Check for multiple decimal separators
+    dot_count = s.count('.')
+    comma_count = s.count(',')
+    if dot_count > 1 or comma_count > 1:
+        return False
+    if dot_count == 1 and comma_count == 1:
+        # Both present - ambiguous, but could be valid
+        last_dot = s.rfind('.')
+        last_comma = s.rfind(',')
+        if abs(last_dot - last_comma) <= 1:
+            return False  # Too close together
     return True
 
 

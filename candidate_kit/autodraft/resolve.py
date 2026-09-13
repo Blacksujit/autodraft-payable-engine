@@ -175,10 +175,16 @@ def resolve_taxes(tax_items: list, country_hint: str = "") -> List[Dict[str, str
     out = []
     for t in tax_items:
         code = _match_tax_code(float(t.tax_rate or 0), country_hint, t.tax_type, t.tax_name)
+        # Format tax_rate to 2 decimal places
+        try:
+            rate_val = float(t.tax_rate or 0)
+            rate_str = f"{rate_val:.2f}"
+        except (ValueError, TypeError):
+            rate_str = t.tax_rate or ""
         out.append({
             "tax_type": t.tax_type or "VAT",
             "tax_name": t.tax_name or "",
-            "tax_rate": t.tax_rate or "",
+            "tax_rate": rate_str,
             "tax_amount": t.tax_amount or "",
             "tax_type_code": code,
         })

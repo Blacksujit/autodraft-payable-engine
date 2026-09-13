@@ -53,19 +53,35 @@ def _s(v) -> str:
 
 
 def _tax_dict(t) -> dict:
+    def fmt_rate(rate_str: str) -> str:
+        """Format tax rate to 2 decimal places."""
+        try:
+            v = Decimal(str(rate_str).replace(",", "."))
+            return _s(v)
+        except Exception:
+            return _s(rate_str)
+    
+    def fmt_amount(amt_str: str) -> str:
+        """Format tax amount to 2 decimal places."""
+        try:
+            v = Decimal(str(amt_str).replace(",", "."))
+            return _s(v)
+        except Exception:
+            return _s(amt_str)
+    
     if isinstance(t, dict):
         return {
             "tax_type": t.get("tax_type") or "VAT",
             "tax_name": t.get("tax_name") or "",
-            "tax_rate": _s(t.get("tax_rate")),
-            "tax_amount": _s(t.get("tax_amount")),
+            "tax_rate": fmt_rate(t.get("tax_rate")),
+            "tax_amount": fmt_amount(t.get("tax_amount")),
             "tax_type_code": t.get("tax_type_code") or "",
         }
     return {
         "tax_type": t.tax_type or "VAT",
         "tax_name": t.tax_name or "",
-        "tax_rate": _s(t.tax_rate),
-        "tax_amount": _s(t.tax_amount),
+        "tax_rate": fmt_rate(t.tax_rate),
+        "tax_amount": fmt_amount(t.tax_amount),
         "tax_type_code": t.tax_type_code or "",
     }
 

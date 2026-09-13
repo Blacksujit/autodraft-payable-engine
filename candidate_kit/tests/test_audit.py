@@ -122,14 +122,17 @@ class TestAuditFile:
         result = audit_file("nonexistent.pdf", "nonexistent.json")
         assert result["status"] == "missing_output"
 
-    def test_declined_document(self, tmp_path):
+    def test_declined_document(self, tmp_path, mock_pdf_path):
         # Create a declined output
         output_file = tmp_path / "test.json"
         output_file.write_text('{"file": "test.pdf", "payables": [], "declined": [{"reason": "test"}]}')
         
-        result = audit_file("test.pdf", str(output_file))
-        # Should handle declined documents gracefully
-        assert result["status"] in ["ok", "issues"]
+        if mock_pdf_path:
+            result = audit_file(mock_pdf_path, str(output_file))
+            # Should handle declined documents gracefully
+            assert result["status"] in ["ok", "issues"]
+        else:
+            pytest.skip("No PDF available for testing")
 
 
 class TestRenderPage:

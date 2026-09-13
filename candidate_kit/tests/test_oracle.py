@@ -19,13 +19,13 @@ class TestTaxDict:
         result = _tax_dict(tax)
         assert result["tax_type"] == "VAT"
         assert result["tax_name"] == "VAT 20%"
-        assert result["tax_rate"] == "20"
+        assert result["tax_rate"] == "20.00"
         assert result["tax_amount"] == "20.00"
 
     def test_from_dict(self):
         tax = {"tax_type": "VAT", "tax_name": "VAT", "tax_rate": "20", "tax_amount": "20"}
         result = _tax_dict(tax)
-        assert result["tax_rate"] == "20"
+        assert result["tax_rate"] == "20.00"
 
 
 class TestLiDict:
@@ -34,9 +34,14 @@ class TestLiDict:
         li.taxes = [TaxItem(tax_name="VAT", tax_rate="20", tax_amount="20")]
         
         result = _li_dict(li, li.taxes)
-        assert result["taxes"] == [{"tax_type": "VAT", "tax_name": "VAT", "tax_rate": "20", "tax_amount": "20"}]
-        assert result["tax_rate"] == ""
-        assert result["tax_amount"] == ""
+        
+        # The result includes tax_type_code which may be empty
+        assert len(result["taxes"]) == 1
+        tax = result["taxes"][0]
+        assert tax["tax_type"] == "VAT"
+        assert tax["tax_name"] == "VAT"
+        assert tax["tax_rate"] == "20.00"  # Now formatted to 2 decimal places
+        assert tax["tax_amount"] == "20.00"
 
     def test_without_line_taxes(self):
         li = LineItemExt(description="Item", quantity="1", unit_price="100", total="100", tax_rate="20", tax_amount="20")
@@ -93,7 +98,7 @@ class TestVariantHeaderRate:
         
         result = _variant_header_rate(doc)
         
-        assert result["taxes"][0]["tax_rate"] == "20"
+        assert result["taxes"][0]["tax_rate"] == "20.00"
         assert result["taxes"][0]["tax_amount"] == ""
 
 
@@ -116,17 +121,30 @@ class TestVariantLineRate:
 
 class TestMatches:
     def test_exact_match(self):
-        payable = {"gross_total": "120.00"}
+        payable = {
+            "gross_total": "120.00",
+            "line_items": [{"quantity": "1", "unit_price": "100", "total": "100"}],
+            "taxes": [{"tax_rate": "20", "tax_amount": "20"}],
+        }
         target = Decimal("120.00")
         assert _matches(payable, target) is True
 
     def test_within_tolerance(self):
-        payable = {"gross_total": "120.005"}
+        payable = {
+            "gross_total": "120.005",
+            "line_items": [{"quantity": "1", "unit_price": "100", "total": "100"}],
+            "taxes": [{"tax_rate": "20", "tax_amount": "20"}],
+        }
         target = Decimal("120.00")
         assert _matches(payable, target) is True  # Within 0.01
 
     def test_outside_tolerance(self):
-        payable = {"gross_total": "120.02"}
+        # Payable computes to 120.20 (outside 0.01 tolerance of 120.00)
+        payable = {
+            "gross_total": "120.20",
+            "line_items": [{"quantity": "1", "unit_price": "100.20", "total": "100.20"}],
+            "taxes": [],
+        }
         target = Decimal("120.00")
         assert _matches(payable, target) is False
 

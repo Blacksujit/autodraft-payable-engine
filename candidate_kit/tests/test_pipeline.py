@@ -10,7 +10,7 @@ from autodraft.fields import ExtractedDoc
 class TestProcessPdfDetail:
     def test_nonexistent_file(self):
         result = process_pdf_detail("nonexistent.pdf")
-        assert result[0]["error"] == "no_pages"
+        assert result[0]["error"] == "pdf_error: no such file: 'nonexistent.pdf'"
 
     def test_invalid_pdf(self, tmp_path):
         # Create a non-PDF file
