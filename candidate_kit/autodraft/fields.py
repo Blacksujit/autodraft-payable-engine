@@ -133,6 +133,9 @@ def assign_roles(table: Table) -> Dict[str, int]:
     if roles["unit"] >= 0 and roles["unit"] == roles["total"]:
         roles["unit"] = -1
 
+    round2 = quantize_2
+    _repair_roles_with_data(table, roles, header)
+
     best, best_score = None, -1
     for ci in [c.index for c in table.columns if c.index not in table.money_cols and c.index != Table.DESCR]:
         cnt, mx = 0, 0
@@ -151,6 +154,38 @@ def assign_roles(table: Table) -> Dict[str, int]:
 
 
 _QTY_SPLIT = re.compile(r"^([\d.,]+)\s*(.*)$")
+
+
+def _repair_roles_with_data(table, roles, header):
+    """Header labels sometimes land on split/empty columns (col 4 vs col 3).
+    If a header-assigned unit/total column carries no money in any data row,
+    fall back to the nearest data-bearing money column."""
+    def col_has_money(ci):
+        if ci < 0:
+            return False
+        for r in sorted(table.rows):
+            if header is not None and r == header:
+                continue
+            if _money_token(table.cell(r, ci)) is not None:
+                return True
+        return False
+
+    data_cols = [c.index for c in table.columns
+                 if c.index in table.money_cols and col_has_money(c.index)]
+    if not data_cols:
+        return
+    ordered = sorted(data_cols)
+
+    for role in ("total", "unit"):
+        cur = roles.get(role, -1)
+        if cur >= 0 and col_has_money(cur):
+            continue
+        if ordered:
+            roles[role] = ordered[-1] if role == "total" else ordered[0]
+            if roles["total"] == roles["unit"]:
+                ordered_excl = [c for c in ordered if c != roles["total"]]
+                if ordered_excl:
+                    roles[role] = ordered_excl[-1] if role == "total" else ordered_excl[0]
 
 
 def _split_qty_uom(tok: str) -> Tuple[Optional[Decimal], str]:
@@ -696,11 +731,11 @@ def _is_summary_row(desc: str, qty: str, unit: str, total: str) -> bool:
     # Tax lines are not summaries (they have tax labels like GST, VAT, etc.)
     if _is_tax_label(desc):
         return False
-    # No quantity but has total = summary row
-    if not qty and total:
-        return True
     # No meaningful data
     if not qty and not unit and not total:
+        return True
+    # No quantity and no unit price but has total = likely summary row
+    if not qty and not unit and total:
         return True
     return False
 
@@ -779,9 +814,9 @@ def _extract_line_items_from_text(layout: PageLayout, g: Dict[str, str]) -> List
         re.I
     )
     # Pattern: Description Qty/Unit UnitPrice Total (e.g., "Description 1/1 EA 39.99 39.99")
-    # Description can contain spaces, Qty/Unit like "1/1 EA", "2/2 EA", "1/1"
+    # Description can contain spaces, Qty/Unit like "1/1 EA", "2/2 CS(6)", "1/1"
     line_pattern4 = re.compile(
-        r"^(.+?)\s+(\d+/\d+(?:\s+\w+)?)?\s*[€$£E]?\s*([\d.,]+)\s*([\d.,]+)$",
+        r"^(.+?)\s+(\d+/\d+(?:\s+\S+)?)?\s*[€$£E]?\s*([\d.,]+)\s*([\d.,]+)$",
         re.I
     )
 
@@ -853,6 +888,29 @@ def _extract_line_items_from_text(layout: PageLayout, g: Dict[str, str]) -> List
                     li.item_type = _item_type(li.description)
                     items.append(li)
                     break
+                elif pat == line_pattern4:
+                    desc, qty_unit, unit_price, total = groups
+                    total_d = _money_token(total)
+                    if total_d is None:
+                        continue
+                    li = LineItemExt(description=desc.strip())
+                    # qty_unit might be like "1/1 EA", "2/2 CS(6)", "1/1", or None
+                    qty_d = None
+                    if qty_unit:
+                        qty_part = qty_unit.split("/")[0]
+                        qty_d = _money_token(qty_part)
+                    unit_d = _money_token(unit_price)
+                    if unit_d is not None:
+                        li.unit_price = str(unit_d)
+                    li.total = str(total_d)
+                    if qty_d is not None:
+                        li.quantity = str(qty_d)
+                    elif unit_d is not None and unit_d != 0 and (total_d / unit_d) % 1 == 0:
+                        # legit derivation from page words: total/unit is a whole count
+                        li.quantity = str(int(total_d / unit_d))
+                    li.item_type = _item_type(li.description)
+                    items.append(li)
+                    break
     return items
 
 
@@ -897,8 +955,10 @@ def _top_amount(text: str) -> str:
 
 
 def _extract_totals(header_text: str, footer_text: str, line_sum: Decimal,
-                    taxes: List[TaxItem], g: Dict[str, str]):
+                    taxes: List[TaxItem], g: Dict[str, str], table_summary: str = ""):
     txt = footer_text or header_text
+    if table_summary:
+        txt = "\n".join(x for x in (txt, table_summary) if x)
     gross = _label_amount(txt, _BAL_LABELS, prefer_last=True)
     if not gross:
         gross = _label_amount(txt, _GROSS_LABELS, prefer_last=True)
@@ -1088,8 +1148,36 @@ def extract(layout: PageLayout) -> ExtractedDoc:
         if key not in seen_tax:
             seen_tax.add(key)
             doc.taxes.append(t)
+    # Summary rows inside the table (Sub-total/Delivery/Total/VAT rows) are
+    # often where a document prints its real totals -- feed them to the totals
+    # extractor as an extra text block so they are seen (esp. multi-page docs).
+    summary_rows_text = ""
+    if layout.table:
+        try:
+            _roles = assign_roles(layout.table)
+            _header = layout.table.header_row
+            _lines = []
+            for _r in sorted(layout.table.rows):
+                if _header is not None and _r == _header:
+                    continue
+                _desc = layout.table.cell(_r, Table.DESCR)
+                _q = layout.table.cell(_r, _roles["qty"]) if _roles["qty"] >= 0 else ""
+                _u = layout.table.cell(_r, _roles["unit"]) if _roles["unit"] >= 0 else ""
+                _t = layout.table.cell(_r, _roles["total"]) if _roles["total"] >= 0 else ""
+                if not _desc:
+                    continue
+                # Only rows that are summary/tax totals (skipped as line items)
+                if not (_is_summary_row(_desc, _q, _u, _t) or _is_tax_label(_desc)):
+                    continue
+                _moneys = [str(_money_token(x)) for x in (_q, _u, _t) if x and _money_token(x) is not None]
+                _lines.append((_desc + " " + " ".join(_moneys)).strip())
+            summary_rows_text = "\n".join(_lines)
+        except Exception:
+            summary_rows_text = ""
+
     # totals --------------------------------------------------------------
-    gross, sub, tax_total, disc, freight = _extract_totals(header_text, footer_text, line_sum, doc.taxes, g)
+    gross, sub, tax_total, disc, freight = _extract_totals(
+        header_text, footer_text, line_sum, doc.taxes, g, summary_rows_text)
 
     doc.gross = _numish(gross)
     doc.subtotal = _numish(sub)

@@ -1,0 +1,103 @@
+  135: Arve
+  142: 1410
+  145: Maksja:
+  148: Northwind Services EE00
+  168: Kuupaev: | 30.04.2026
+  169: Rua do Ouro 15
+  190: Tasumistingimus: | 30paeva
+  191: 10134Kesklinnalinnaosa,Tallinn,Harjumaakond
+  211: KMKR:
+  212: 30.05.2026
+  213: EE258627691 | Tasumistahtaeg:
+  231: 0%
+  233: Kontaktisik: | Vivis:
+  274: Lahetusaeg:
+  275: Northwind Services EE 00
+  276: Saaja:
+  299: Rua do Ouro 15
+  321: 10134Kesklinna linnaosa,Tallinn,Harjumaakond
+  341: Kommentaar:Parkingservices2026-04
+  360: 1/2
+  361: Lehekilg:
+  388: Kogus Uhik
+  389: Kood | Hind
+  390: Nimetus | Summa | KM%
+  436: 63 479.69 | 24
+  438: 63479.69
+  440: ParkingfeeEUROPARK
+  463: 24
+  465: 12 695.94 | -12695.94
+  467: ParkingfeeEUROPARKdiscount20%
+  491: 24
+  493: 3173.98 | 3173.98
+  494: ParkingfeeEUROPARK successfee
+  520: 24
+  522: ParkingfeeEUROPARKUlemisteCityHGarage,zone335 | 234.86 | 234.86
+  550: ParkingfeeEUROPARKKESKLINN | 13528.54 | 13528.54
+  574: 8 897.68
+  578: ParkingfeeEUROPARK SUDALINN | 8897.68
+  604: 24
+  605: 6 976.80
+  606: ParkingstartfeeEUROPARK | 6 976.80
+  632: 24
+  634: ParkingfeeUHISTEENUSEDOPENAREA | 21380.06 | 21 380.06
+  659: -1 | 24
+  660: ParkingfeeOHISTEENUSEDOPENAREAdiscount20%
+  661: 4276.01 | -4 276.01
+  688: ParkingfeeOHISTEENUSEDOPENAREAsuccessfee | 24
+  689: 1069.00 | 1069.00
+  717: ParkingfeeOHISTEENUSEDTARTU
+  718: 875.10 | 875.10
+  744: 24
+  745: Parking startfee UHISTEENUSED | 1939.80 | 1939.80
+  772: 1075.86 | 24
+  773: ParkingfeeAVALIKUDTEENUSED | 1075.86
+  800: -215.17 | 24
+  801: 215.17
+  804: ParkingfeeAVALIKUDTEENUSEDdiscount20%
+  828: 24
+  829: 53.79 | 53.79
+  830: ParkingfeeAVALIKUDTEENUSEDsuccessfee
+  855: 119.00 | 24
+  856: 119.00
+  859: ParkingstartfeeAVALIKUDTEENUSED
+  884: Parking fee Snabb | 24
+  886: 20 711.63 | 20 711.63
+  913: 24
+  914: 2946.89 | -2 946.89
+  915: Parking fee Snabb discount
+  940: 24
+  941: 736.70 | 736.70
+  942: Parking fee Snabb success fee
+  967: 24
+  968: 1952.18
+  969: 1952.18
+  970: Parkingfee Snabb with special price
+  995: 24
+  998: Parkingfee Snabb specialprice for Northdiseount | 1108.87 | -1108.87
+ 1025: 24
+ 1026: ParkingfeeSnabb special priceforNorthsuacessfee | 160.85 | 160.85
+ 1053: Parking start fee Snabb
+ 1054: 2379.20 | 2379.20 | 24
+ 1080: 50.00 | 50.00 | 24
+ 1082: Parkingfee Mahtra 5/Mahtra 27
+ 1107: 12.50 | 12.50
+ 1109: Parkingfee Mahtra 5/Mahtra 27successfee
+ 1110: 24
+ 1289: KM
+ 1290: KM% | Neto | Kokku
+ 1291: Arvekoostas:
+ 1292: Martin Vidal
+ 1311: 0% | 0.00
+ 1312: E-mail: | 23301.32 | 23301.32
+ 1316: luis.kask@brightside-trading.me
+ 1333: 24%
+ 1334: 104 263.02 | 25023.12 | 129 286.14
+ 1357: 127564.34 | 25 023.12 | 152587.46
+ 1385: Tasuda (EUR): | 152 587.46
+ 1455: E-post: maria.meyer@brightside-services.me
+ 1456: Cloverdale Supply 00 | Oakhaven BanEE978205278750080990
+ 1478: Telefon: +3893896797 | SWIFT/BIC:XYQXPY30
+ 1479: Reg.nr:75689514
+ 1500: KMKR nr: EE085819779
+ 1520: Aadress: High Street64 | ,Eesti

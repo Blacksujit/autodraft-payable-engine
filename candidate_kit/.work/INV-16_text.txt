@@ -1,0 +1,37 @@
+   71: Arve number: | Arve
+   73: TLLIR72836045
+   88: Kliendikood: | 952774062
+  105: Arve kuupaev: | 09-06-25
+  121: 2/2
+  122: Lehekulgede arv:
+  183: Sihtkoht/saaja
+  184: Saatelehe | Saadetise Lahtekoht/saatja | Teenuse
+  185: Kaal
+  186: Saatja viide | OsadeStandard- | Lisateenuste | Lisatee- | KM/koodKogusum-
+  201: lik | (Kg) | kirjeldus
+  202: arv | hind
+  203: number | kuupaev | nuste
+  204: ma
+  218: (KM-ga)
+  252: 1,00 V
+  253: ECONOMY | 4,15A
+  254: MHN, MANNHEIM | WAW,WARSAW | 18,87 | 23,02
+  256: 6757799188 | STK-EE003-25-0025004-06-25
+  268: 2,83
+  271: NORTORERATIONSOUEMANNHEIM | SELECT | FUEL SURCHARGE | 0,62 A | 3,45
+  272: Northwind OPERATIONS OUCWH
+  286: Maria Haas
+  290: Jonas Weber
+  305: Lindenstrasse 20
+  308: Gartenweg6
+  322: LOCATIONISONTHEBASEMENTOFBUIL
+  323: PL-01-940,Warsaw
+  340: DE-68165, MANNHEIM
+  356: 26,47
+  377: Vahesummateenusejargi-ECONOMYSELECT | 4,77
+  378: 1,00 | 18,87 | 2,83 | 26,47
+  400: 2,83 | 4,77 | 26,47
+  401: 1,00 | 18,87
+  403: Kokku: EUR:
+  422: M = sega
+  423: A = Kliendi poolt arvutatud tegelik kaal V= Kliendi poolt arvutatud mahukaal | B = DHLi poolt arvutatud tegelik kaal W= DHLi poolt arvutatud mahukaal

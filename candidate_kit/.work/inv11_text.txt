@@ -1,0 +1,83 @@
+﻿python : Traceback (most recent call last):
+At line:1 char:86
++ ... te_kit; $env:PYTHONPATH="D:\candidate_kit\candidate_kit"; python -c "
++                                                               ~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "<string>", line 14, in <module>
+    print('%5.0f: %s'%(k,' | '.join(w.text for w in ws)))
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\uff08' in position 15: character maps to <undefined>
+98 lines
+   22: ARVEINVOICE
+   55: Muuja-SaatjaSeller-Consignor
+   79: NorthwindOperationsoUs?oJo?odaTalh
+   90: Kuupaev Date
+   92: Arve nr.InvoiceNo.
+  102: Parnumnt 10
+  124: 07.04.26
+  128: 18109293
+  142: er No.
+  148: 2695671S?oJo?odaTalha
+  177: PORTUGAL
+  197: Ref.
+  200: EE398766194
+  201: ArvemaksjaPayerofinvoice
+  220: kaotsimineku ja
+  222: NorthwindOPERATIONSOU2505212
+  247: Lindenstrasse15
+  292: 10134 TALLINN
+  314: Meridian Media
+  315: eoste hilinemise,
+  319: EESTI
+  337: Gartenweg12
+  341: Vastuvotja Consignee
+  356: +(052) 3729958
+  367: NorthwindOperationsOUDosHermanas
+  377: E-M
+  379: lena.tamm@blackpine-media.ee
+  393: Parnumnt43
+  396: wwwhttps://cloverdale-mobility.ee
+  417: rmanas
+  418: Re
+  421: 64670685
+  431: VeovahendVehicle
+  435: LahtepunktPlaceofdeparture
+  438: VATNoEE063536009
+  463: S?oJo?oda Talha
+  487: SaatmisekuupaevDispatchedon
+  504: kisutuses
+  508: 01.04.26
+  534: PealelaadimisekohtFrom | TarneklauselTermofdelivery
+  558: S?o Jo?o da Talha
+  581: Umberlaadimisekoht
+  583: SihtpunktDestination
+  606: Dos Hermanas
+  607: Exw S?o Jo?o da Talha
+  632: Markeerinqud.kohtadearviakaubanimetus.MarksandNos.NoofPiecesandNatureofGoods
+  652: 3 CTN spares
+  676: REFNR.FJ193631STK-PT001-26-000084
+  759: EE06313226438105BatXrutokaaArvestuslikkaal
+  774: Volume
+  776: ight | Chargeable weight
+  794: 65
+  795: 0,144
+  796: 64,7
+  829: KMVAT
+  830: Selgitused Explanations
+  831: LisaandmedAdditionalinformation
+  892: 5,00
+  893: 4O8AGREED PICKUP FEE | 24,0%
+  915: 53,40
+  916: 551 | 24,0 %
+  918: TARNEKULUD
+  938: 5,00
+  939: 805AGREEDDELIVERYFEE
+  940: 24,0%
+  962: 920
+  963: 24,0%
+  964: 3,70

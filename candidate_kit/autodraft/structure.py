@@ -150,9 +150,13 @@ class Table:
         toks = self.rows.get(row, {}).get(col, [])
         if not toks:
             return ""
-        toks = sorted(toks, key=lambda tb: tb[0].x0)
+        # Filter out tokens with None box
+        valid_toks = [(bx, t) for bx, t in toks if bx is not None]
+        if not valid_toks:
+            return ""
+        valid_toks = sorted(valid_toks, key=lambda tb: tb[0].x0)
         seen, out = set(), []
-        for bx, t in toks:
+        for bx, t in valid_toks:
             if t in seen:
                 continue
             seen.add(t)
@@ -202,6 +206,49 @@ def _cluster_centers(centers: List[float], tol: float) -> List[List[float]]:
 
 # ── main entry ───────────────────────────────────────────────────────────────
 
+def _find_header_row(rows: List[List[Line]], best_start: int):
+    """Scan upward from the first numeric row for the closest plausible table
+    header. Stray caption rows (few words, non-header text) that separate the
+    header from the data are skipped; the scan stops at the first non-header
+    block that looks like content."""
+    for dist in range(1, 5):
+        if best_start - dist < 0:
+            break
+        cand = rows[best_start - dist]
+        words = [w for ln in cand for w in ln.words]
+        joined = " ".join(w.text for w in words)
+        n_words = len(words)
+        if n_words == 0:
+            continue
+        label_hits = sum(1 for w in words if _looks_like_header_word(w.text))
+        if n_words >= 3 or label_hits >= 2:
+            return best_start - dist, True
+        if _low_information_row(words):
+            continue
+        return best_start, False
+    return best_start, False
+
+
+def _looks_like_header_word(text: str) -> bool:
+    """Words that strongly suggest a table header rather than a stray caption."""
+    t = text.upper()
+    for key in (
+        "POS", "QTY", "QUANT", "UNIT", "PRICE", "VAT", "TAX", "TOTAL", "AMOUNT",
+        "DESC", "ITEM", "GOODS", "DESCRIPTION", "NUMBER", "RATE", "DISCOUNT",
+        "WEIGHT", "ARTICLE", "ARTNO", "KOGUS", "KOGUSTA", "AAM", "SILT", "VAIS",
+    ):
+        if key in t:
+            return True
+    return False
+
+
+def _low_information_row(words) -> bool:
+    """A stray caption / leftover line that may separate a header from the data."""
+    if len(words) > 4:
+        return False
+    text = " ".join(w.text for w in words).upper()
+    return len(text) <= 40
+
 def build_layout(path: str, page_index: int, words: List[Word]) -> PageLayout:
     lines = cluster_lines(words)
     rows = group_lines_by_bands(lines)
@@ -234,10 +281,7 @@ def build_layout(path: str, page_index: int, words: List[Word]) -> PageLayout:
         has_header = False
         with_header = best_start
         if best_start > 0:
-            n_words = sum(len(ln.words) for ln in rows[best_start - 1])
-            if n_words >= 3:
-                with_header = best_start - 1
-                has_header = True
+            with_header, has_header = _find_header_row(rows, best_start)
         table, data_rows_used = _build_table(rows, with_header, best_end, has_header)
         if table is not None:
             layout.table = table

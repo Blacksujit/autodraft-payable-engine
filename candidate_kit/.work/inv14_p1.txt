@@ -1,0 +1,56 @@
+  257: Invoice Date
+  261: SilverbrookMediaLimited
+  268: TAX INVOICE
+  281: 01May2026 | Attention:Finance
+  303: 2nd Floor
+  324: InvoiceNumber
+  325: Parnumnt117
+  331: NorthwindServicesUKLtd
+  347: INV-1587
+  348: Parnumnt26
+  353: RuadoOuro175
+  368: London
+  373: Taper Studio
+  391: Reference | Middlesex
+  395: London
+  413: N19RY
+  414: June2026-Kadakatee119
+  418: SE14GT
+  436: NorthwitahagementFee | UNITEDKINGDOM
+  477: VAT Number
+  502: 474927490
+  544: UTRNumber
+  567: 1882319423
+  639: Quantity | VAT
+  640: Description | AmountGBP
+  641: Unit Price
+  676: 2nd Floor
+  707: 14,620.18
+  708: 1.00
+  709: ManagementFeeforJune2026 | 20%
+  711: 14,620.18
+  740: 9,987.50 | 9,987.50
+  742: 1.00 | No VAT
+  744: BusinessRatesforJune2026
+  775: Utilities for June 2026 | 1.00 | 20%
+  776: 1,435.00 | 1,435.00
+  809: 26,042.68
+  810: Subtotal
+  842: Total No VAT | 0.00
+  876: 3,211.04
+  878: TotalVAT20%
+  911: 29,253.72
+  913: InvoiceTotal GBP
+  945: 0.00
+  946: TotalNetPaymentsGBP
+  979: 29,253.72
+  980: AmountDueGBP
+ 1055: DueDate:31May2026
+ 1104: Bankname:MeridianBank
+ 1129: Sortcode:20-41-50
+ 1153: Accountnumber:21823016
+ 1179: Swiftcode:SKYYOU10
+ 1204: IBAN:GB84FAQA54689987784014
+ 1507: CompanyRegistrationNo:43214229.Registeredoffice:2ndFloor,Parnumnt117
+ 1509: , London,Middlesex,N19Ry,United Kingdom
+ 1510: .Pamumnt26

@@ -16,6 +16,14 @@ WORK_DIR = Path(__file__).resolve().parent.parent / ".work" / "pages"
 WORK_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _is_numeric(s) -> bool:
+    try:
+        float(str(s).replace(",", "").replace(" ", "").rstrip("R"))
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
 def _render_page(pdf_path: str, page_no: int = 0) -> str:
     stem = Path(pdf_path).stem
     out = WORK_DIR / f"{stem}_p{page_no+1}.png"
@@ -99,16 +107,30 @@ def _extract_doc(pdf_path: str):
     ext = extracts[0]
     ext.line_items = unique_lines
 
-    # Merge totals from the page that has the gross (prefer last page with gross)
-    for candidate in reversed(extracts):
-        if candidate.gross:
-            ext.gross = candidate.gross
-            ext.subtotal = candidate.subtotal
-            ext.tax_total = candidate.tax_total
-            ext.discount_amount = candidate.discount_amount
-            ext.freight_charges = candidate.freight_charges
-            ext.page_text = candidate.page_text
-            break
+    # Merge totals from the page that has the gross (prefer a label-grounded gross
+    # over a guess from _top_amount; among label-grounded pages keep the last).
+    def _labeled_gross(c):
+        if not c.gross:
+            return False
+        gr = (c.ground or {}).get("gross", "")
+        return bool(gr) and not _is_numeric(gr)
+
+    source = None
+    labeled = [c for c in extracts if _labeled_gross(c)]
+    if labeled:
+        source = labeled[-1]
+    else:
+        for candidate in reversed(extracts):
+            if candidate.gross:
+                source = candidate
+                break
+    if source:
+        ext.gross = source.gross
+        ext.subtotal = source.subtotal
+        ext.tax_total = source.tax_total
+        ext.discount_amount = source.discount_amount
+        ext.freight_charges = source.freight_charges
+        ext.page_text = source.page_text
 
     # Merge taxes (deduplicate by rate+amount+type)
     seen_tax = set()
