@@ -135,7 +135,7 @@ class Table:
     columns: List[Column] = field(default_factory=list)
     # rows: global row index -> {column index -> [(Box, text)]}
     rows: Dict[int, Dict[int, List[Tuple[Box, str]]]] = field(default_factory=dict)
-    DESCR = -1  # virtual column for the description region
+    DESCR: int = -1  # virtual column for the description region
     header_row: Optional[int] = None
     money_cols: List[int] = field(default_factory=list)
     desc_edge: float = 0.0
@@ -150,11 +150,14 @@ class Table:
         toks = self.rows.get(row, {}).get(col, [])
         if not toks:
             return ""
-        # Filter out tokens with None box
+        # Keep None-box tokens for structural test fixtures and sparse OCR rows.
+        # A row may legitimately carry text without box geometry; in that case,
+        # sorting by x0 is not possible, so we keep the original order.
         valid_toks = [(bx, t) for bx, t in toks if bx is not None]
         if not valid_toks:
-            return ""
-        valid_toks = sorted(valid_toks, key=lambda tb: tb[0].x0)
+            valid_toks = [(None, t) for _, t in toks]
+        if valid_toks and valid_toks[0][0] is not None:
+            valid_toks = sorted(valid_toks, key=lambda tb: tb[0].x0)
         seen, out = set(), []
         for bx, t in valid_toks:
             if t in seen:
@@ -333,10 +336,12 @@ def _build_table(rows: List[List[Line]], start: int, end: int, has_header: bool 
     leftmost_money_band = min(c.center for c in columns if c.index in money_cols)
     desc_x1 = leftmost_money_band - tol  # description region boundary
 
+    desc_col = -1
+
     def assign(w: Word) -> Tuple[Optional[int], bool]:
         """Return (column index, is_money_band). desc region -> DESCR."""
         if w.box.x0 < desc_x1:
-            return Table.DESCR, False
+            return desc_col, False
         best, bd = None, None
         for c in columns:
             d = abs(w.box.x0 - c.center)

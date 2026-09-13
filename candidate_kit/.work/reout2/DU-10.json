@@ -1,0 +1,61 @@
+{
+  "file": "DU-10.pdf",
+  "payables": [
+    {
+      "invoice_number": "5900366703",
+      "invoice_date": "2026-04-15",
+      "due_date": "2026-05-15",
+      "invoice_type": "CREDIT_MEMO",
+      "currency": "GBP",
+      "supplier": {
+        "name": "DepartmentAccounts",
+        "supplier_id": "",
+        "address": "JalanAmpang157 NorthwindServicesUKLimited Credit Note No.:5900366703, Jalan Ampang175, LondonSE14GT, UNITEDKINGDOM Date ：15/04/2026 Page.1",
+        "vat_id": "istrationNo"
+      },
+      "buyer": {
+        "company_code": "BOLTGROUP",
+        "business_unit_code": "GB001",
+        "location_code": "LOC_GB_001"
+      },
+      "payment_term_id": "Net_30",
+      "po_number": "erence",
+      "po_id": "",
+      "gross_total": "5076.17",
+      "subtotal": "4230.14",
+      "total_tax_amount": "846.03",
+      "discount_amount": "",
+      "freight_charges": "",
+      "insurance_charges": "",
+      "extra_charges": "",
+      "excise_duties": "",
+      "discount": "",
+      "taxes": [
+        {
+          "tax_type": "VAT",
+          "tax_name": "VAT 20 %",
+          "tax_rate": "",
+          "tax_amount": "846.03",
+          "tax_type_code": ""
+        }
+      ],
+      "line_items": [
+        {
+          "description": "Net AmountGBP",
+          "item_type": "GOODS",
+          "uom": "",
+          "quantity": "1",
+          "unit_price": "4230.14",
+          "total": "4230.14",
+          "discount": "",
+          "discount_percentage": "",
+          "tax_rate": "",
+          "tax_amount": "",
+          "taxes": []
+        }
+      ]
+    }
+  ],
+  "declined": [],
+  "invoice_number": ""
+}

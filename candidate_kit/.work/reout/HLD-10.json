@@ -1,0 +1,11 @@
+{
+  "file": "HLD-10.pdf",
+  "payables": [],
+  "declined": [
+    {
+      "doc_type": "INVOICE",
+      "reason": "Invoice #27044945 from NorthwindOperations OU Arve number:. ERP gate failed (gross_mismatch:254.52:729.22;729.22;729.22;729.22;601.97;729.22): the printed gross cannot be recovered from the emitted components within 0.01."
+    }
+  ],
+  "invoice_number": "27044945"
+}

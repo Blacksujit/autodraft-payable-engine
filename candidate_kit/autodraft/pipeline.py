@@ -1,16 +1,17 @@
 """pipeline.py - full document ingestion: render -> OCR -> extract -> oracle."""
 from __future__ import annotations
-import os, sys, json, io
+import os, sys, json, io, re
 from pathlib import Path
 from typing import Optional
 import pymupdf
 from autodraft.ocr import ocr_words
 from autodraft.geom import cluster_lines, group_lines_by_bands
 from autodraft.structure import build_layout
-from autodraft.fields import extract, ExtractedDoc
+from autodraft.fields import extract, ExtractedDoc, TaxItem
 from autodraft.classify import decide
 from autodraft.oracle import build_payable, oracle_gate, format_output
 from autodraft.resolve import resolve_supplier, resolve_buyer, resolve_payment_terms, resolve_po_ids, resolve_taxes
+from decimal import Decimal, ROUND_HALF_UP
 
 WORK_DIR = Path(__file__).resolve().parent.parent / ".work" / "pages"
 WORK_DIR.mkdir(parents=True, exist_ok=True)
@@ -22,6 +23,46 @@ def _is_numeric(s) -> bool:
         return True
     except (ValueError, TypeError):
         return False
+
+
+_GST_EXCL_RE = re.compile(
+    r"Sub(?:\s+|[\-\u2010-\u2015])*(?:Total|Tot)\s*\(ex\s*GST\)\s*[:\s]*\$?\s*([\d.,]+)", re.I)
+
+_DECL_TOTAL_RE = re.compile(r"TOTAL\s*GST\s*(?:AMT|AMOUNT)\b[^\d]*([\d.,]+)", re.I)
+
+
+def _apply_ex_gst_genre(ext: ExtractedDoc, extracts) -> None:
+    """AU/NZ 'Sub Total (ex GST)' genre: on these account-summary invoices a
+    stated subtotal excludes 10% GST while the printed balance includes it.
+    When one page states 'Sub Total (ex GST) $X' and the invoice's gross
+    equals X + 10% GST, record the GST line and reconcile the totals."""
+    if not (ext.gross and _is_numeric(ext.gross)):
+        return
+    try:
+        gross = Decimal(str(ext.gross).replace(",", "").strip())
+    except Exception:
+        return
+    if not gross.is_finite() or gross <= 0:
+        return
+    for e in extracts:
+        m = _GST_EXCL_RE.search(e.page_text or "")
+        if not m:
+            continue
+        try:
+            st = Decimal(str(m.group(1)).replace(",", "").strip())
+        except Exception:
+            continue
+        if not st.is_finite() or st <= 0:
+            continue
+        gst = (st * Decimal("10") / Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        if abs((st + gst) - gross) > Decimal("0.005"):
+            continue
+        ext.subtotal = format(st.quantize(Decimal("0.01")), "f")
+        ext.tax_total = format(gst, "f")
+        ext.currency = ext.currency or "AUD"
+        ext.taxes = [TaxItem(tax_type="GST", tax_name="GST", tax_rate="10",
+                             tax_amount=format(gst, "f"))]
+        return
 
 
 def _render_page(pdf_path: str, page_no: int = 0) -> str:
@@ -113,7 +154,12 @@ def _extract_doc(pdf_path: str):
         if not c.gross:
             return False
         gr = (c.ground or {}).get("gross", "")
-        return bool(gr) and not _is_numeric(gr)
+        if not gr or _is_numeric(gr):
+            return False
+        # A "Sub Total (ex GST)"-style ground is a subtotal line, not a gamma.
+        if re.match(r"^Sub[\s\-\u2010-\u2015]*(?:Total|Tot)\b|^Subtotal\b", gr, re.I):
+            return False
+        return True
 
     source = None
     labeled = [c for c in extracts if _labeled_gross(c)]
@@ -142,6 +188,8 @@ def _extract_doc(pdf_path: str):
                 seen_tax.add(key)
                 merged_taxes.append(t)
     ext.taxes = merged_taxes
+
+    _apply_ex_gst_genre(ext, extracts)
 
     ground = {}
     for e in extracts:
@@ -198,13 +246,31 @@ def _process_du_document(pdf_path: str):
     all_payables = []
     all_declined = []
 
+    # GST import duties declaration genre: if a cargo/entry cover page prints
+    # "TOTAL GST AMT <X>", that figure is the declaration's payable gross and the
+    # other sheets (freight / KUE / waybill copies of the same shipment) are not
+    # separate payables.
+    decl_cover_inv = ""
+    decl_amount = ""
+    for ext in extracts:
+        m = _DECL_TOTAL_RE.search(ext.page_text or "")
+        if m and _is_numeric(m.group(1)):
+            decl_cover_inv = ext.invoice_number or ""
+            decl_amount = m.group(1)
+            break
+
     for inv_num, inv_extracts in by_invoice.items():
         if inv_num == "unknown" or not inv_num.strip():
             # No invoice number - skip or decline
             continue
 
+        if decl_cover_inv and inv_num != decl_cover_inv:
+            continue
+
         # Merge extracts for this invoice (usually just one page per invoice)
         primary = inv_extracts[0]
+        if inv_num == decl_cover_inv:
+            primary.ground["duty_declaration"] = decl_amount
         # Collect line items from all pages of this invoice
         all_line_items = []
         for ext in inv_extracts:

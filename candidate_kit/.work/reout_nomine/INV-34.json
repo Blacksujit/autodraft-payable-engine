@@ -1,0 +1,61 @@
+{
+  "file": "INV-34.pdf",
+  "payables": [
+    {
+      "invoice_number": "",
+      "invoice_date": "",
+      "due_date": "",
+      "invoice_type": "TAX_INVOICE",
+      "currency": "USD",
+      "supplier": {
+        "name": "Asian Pacific Serviced Offices Pty Ltd",
+        "supplier_id": "",
+        "address": "SERVICED OFFICES ASIAN PACIFIC Level 3,480Collins Street MelbourneVIC3000 tax invoice",
+        "vat_id": ""
+      },
+      "buyer": {
+        "company_code": "",
+        "business_unit_code": "",
+        "location_code": ""
+      },
+      "payment_term_id": "",
+      "po_number": "",
+      "po_id": "",
+      "gross_total": "572.00",
+      "subtotal": "520.00",
+      "total_tax_amount": "52.00",
+      "discount_amount": "",
+      "freight_charges": "",
+      "insurance_charges": "",
+      "extra_charges": "",
+      "excise_duties": "",
+      "discount": "",
+      "taxes": [
+        {
+          "tax_type": "GST",
+          "tax_name": "GST",
+          "tax_rate": "10.00",
+          "tax_amount": "52.00",
+          "tax_type_code": ""
+        }
+      ],
+      "line_items": [
+        {
+          "description": "Licence Fees -Suite 313b 20/06/2015-19/07/2015",
+          "item_type": "SERVICE",
+          "uom": "",
+          "quantity": "1",
+          "unit_price": "520",
+          "total": "1",
+          "discount": "",
+          "discount_percentage": "",
+          "tax_rate": "",
+          "tax_amount": "",
+          "taxes": []
+        }
+      ]
+    }
+  ],
+  "declined": [],
+  "invoice_number": ""
+}

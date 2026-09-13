@@ -1,0 +1,61 @@
+{
+  "file": "INV-03.pdf",
+  "payables": [
+    {
+      "invoice_number": "9446639440",
+      "invoice_date": "2025-05-25",
+      "due_date": "2025-06-08",
+      "invoice_type": "TAX_INVOICE",
+      "currency": "ZAR",
+      "supplier": {
+        "name": "TAX INVOICE Invoice Date 25May2025 Bahnhofstrasse9 Cloverdale Print Ltd",
+        "supplier_id": "",
+        "address": "",
+        "vat_id": "Amount"
+      },
+      "buyer": {
+        "company_code": "",
+        "business_unit_code": "",
+        "location_code": ""
+      },
+      "payment_term_id": "Net_14",
+      "po_number": "rtingWeCleanItAll",
+      "po_id": "",
+      "gross_total": "8550.00",
+      "subtotal": "7434.78",
+      "total_tax_amount": "1115.22",
+      "discount_amount": "",
+      "freight_charges": "",
+      "insurance_charges": "",
+      "extra_charges": "",
+      "excise_duties": "",
+      "discount": "",
+      "taxes": [],
+      "line_items": [
+        {
+          "description": "Item14607 ContractOfficecleaning-Contract",
+          "item_type": "SERVICE",
+          "uom": "",
+          "quantity": "1",
+          "unit_price": "7434.78",
+          "total": "7434.78",
+          "discount": "",
+          "discount_percentage": "",
+          "tax_rate": "",
+          "tax_amount": "",
+          "taxes": [
+            {
+              "tax_type": "VAT",
+              "tax_name": "VAT",
+              "tax_rate": "15.00",
+              "tax_amount": "1115.22",
+              "tax_type_code": ""
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "declined": [],
+  "invoice_number": "9446639440"
+}

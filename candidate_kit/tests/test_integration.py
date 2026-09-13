@@ -61,7 +61,7 @@ class TestFullPipeline:
         run_folder(str(documents_dir), str(output_dir))
         
         # Check specific known-good documents
-        known_good = ["INV-01", "INV-03", "INV-04", "INV-06", "INV-07", "INV-10", "INV-26", "INV-34"]
+        known_good = ["INV-01", "INV-03", "INV-04", "INV-06", "INV-07", "INV-10", "INV-13", "INV-26", "INV-34"]
         
         for doc_name in known_good:
             output_file = output_dir / f"{doc_name}.json"
@@ -77,7 +77,7 @@ class TestFullPipeline:
         
         run_folder(str(documents_dir), str(output_dir))
         
-        customs_docs = ["DU-02", "DU-03", "DU-05", "DU-05s", "DU-06", "DU-08", "DU-09", "DU-10", "DU-11"]
+        customs_docs = ["DU-02", "DU-03", "DU-05", "DU-05s", "DU-06", "DU-08", "DU-09", "DU-11"]
         
         for doc_name in customs_docs:
             output_file = output_dir / f"{doc_name}.json"
@@ -86,6 +86,19 @@ class TestFullPipeline:
                     data = json.load(f)
                 assert len(data["payables"]) == 0, f"{doc_name} should have no payables"
                 assert len(data["declined"]) > 0, f"{doc_name} should be declined"
+
+    def test_credit_note_accepted(self, documents_dir, output_dir):
+        """DU-10 is a genuine British credit note, not a customs statement: it must book."""
+        output_dir.mkdir(exist_ok=True)
+
+        run_folder(str(documents_dir), str(output_dir))
+
+        output_file = output_dir / "DU-10.json"
+        if output_file.exists():
+            with open(output_file) as f:
+                data = json.load(f)
+            assert len(data["payables"]) == 1, "DU-10 should book exactly one payable"
+            assert len(data["declined"]) == 0, "DU-10 should not be declined"
 
 
 class TestAudit:

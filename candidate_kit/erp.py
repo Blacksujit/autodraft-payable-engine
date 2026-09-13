@@ -103,6 +103,11 @@ def erp_book(payable: dict) -> dict:
     if not isinstance(payable, dict):
         raise ValueError("payable must be a JSON object")
 
+    dd = payable.get("duty_declaration_amount")
+    if dd is not None and str(dd).strip() != "":
+        return {"will_book_gross": round2(num(dd)),
+                "currency": payable.get("currency", "") or ""}
+
     item_discounted_total = 0.0
     line_tax_total = 0.0
     for li in (payable.get("line_items") or []):

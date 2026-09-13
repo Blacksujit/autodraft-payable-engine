@@ -61,6 +61,14 @@ class TestRegexes:
                 assert match.group(1) == "12345"
                 break
 
+    def test_estonian_tax_summary_is_not_misread_as_price_row(self):
+        text = "Käibemaks 24%: 115,03\n001 17/03 Toitlustus kord 479,28"
+        taxes, total = _extract_taxes(text, text, {})
+        assert len(taxes) == 1
+        assert taxes[0].tax_rate == "24"
+        assert taxes[0].tax_amount == "115.03"
+        assert total == "115.03"
+
     def test_date_label_re(self):
         text = "Invoice Date: 15.01.2026"
         match = _DATE_LABEL_RE.search(text)

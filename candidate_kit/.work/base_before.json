@@ -1,0 +1,943 @@
+{
+"DU-02": {
+"payables": [],
+"declined": [
+{
+"doc_type": "CUSTOMS_INVOICE",
+"reason": "Invoice #554701215. Customs/consolidated declaration between third parties; the buyer is not a Bolt Group entity and cannot be resolved against chart_of_books. Not a payable addressed to the tenant."
+}
+],
+"invoice_number": ""
+},
+"DU-03": {
+"payables": [
+{
+"gross": 722.76,
+"subtotal": null,
+"tax_total": null,
+"discount": null,
+"taxes": [
+[
+null,
+0.0
+]
+],
+"line_items": []
+}
+],
+"declined": [],
+"invoice_number": ""
+},
+"DU-05": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #4305460168. ERP gate failed (gross_mismatch:?:0.00;0.00;0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": ""
+},
+"DU-05s": {
+"payables": [],
+"declined": [
+{
+"doc_type": "CUSTOMS_INVOICE",
+"reason": "Invoice #737664 from ndVantek Pte Ltd.. Customs/consolidated declaration between third parties; the buyer is not a Bolt Group entity and cannot be resolved against chart_of_books. Not a payable addressed to the tenant."
+}
+],
+"invoice_number": ""
+},
+"DU-06": {
+"payables": [],
+"declined": [
+{
+"doc_type": "CUSTOMS_INVOICE",
+"reason": "Invoice #785255159 from europastry. Customs/consolidated declaration between third parties; the buyer is not a Bolt Group entity and cannot be resolved against chart_of_books. Not a payable addressed to the tenant."
+},
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #80120853 from europastry. ERP gate failed (gross_mismatch:?:0.00;0.00;0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": ""
+},
+"DU-08": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #1637106114015 from Kingsley TradingGmbH&Co.KG Mahnung. ERP gate failed (gross_mismatch:44.84:4.10;4.10;4.10): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": ""
+},
+"DU-09": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #1400220263 from 1400220263. ERP gate failed (gross_mismatch:?:0.00;0.00;0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": ""
+},
+"DU-10": {
+"payables": [
+{
+"gross": 5076.17,
+"subtotal": 4230.14,
+"tax_total": 846.03,
+"discount": null,
+"taxes": [
+[
+null,
+846.03
+]
+],
+"line_items": [
+[
+1.0,
+4230.14,
+4230.14,
+null,
+null,
+[]
+]
+]
+}
+],
+"declined": [],
+"invoice_number": ""
+},
+"DU-11": {
+"payables": [],
+"declined": [
+{
+"doc_type": "CREDIT_MEMO",
+"reason": "Invoice #795977 from Kreeditarvenr6265-K 00. ERP gate failed (gross_mismatch:400.00:-327.87;-327.87;-400.00;-327.87): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": ""
+},
+"HLD-01": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #510280 from Larkspur Technologies. ERP gate failed (gross_mismatch:?:17992.08;17992.08;17992.08): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "510280"
+},
+"HLD-03": {
+"payables": [],
+"declined": [
+{
+"doc_type": "CUSTOMS_INVOICE",
+"reason": "Invoice #3845708. Customs/consolidated declaration between third parties; the buyer is not a Bolt Group entity and cannot be resolved against chart_of_books. Not a payable addressed to the tenant."
+}
+],
+"invoice_number": "3845708"
+},
+"HLD-05": {
+"payables": [],
+"declined": [
+{
+"doc_type": "CUSTOMS_INVOICE",
+"reason": "Invoice #7769922058 from 7769922058 12/06/2026. Customs/consolidated declaration between third parties; the buyer is not a Bolt Group entity and cannot be resolved against chart_of_books. Not a payable addressed to the tenant."
+}
+],
+"invoice_number": "7769922058"
+},
+"HLD-08": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #6555156 from Fax :(893)6555156 CopyTax Invoice. ERP gate failed (gross_mismatch:148941.47:0.00;0.00;0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "6555156"
+},
+"HLD-10": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #27044945 from NorthwindOperations OU Arve number:. ERP gate failed (gross_mismatch:254.52:729.22;729.22;729.22;729.22;601.97;729.22): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "27044945"
+},
+"INV-01": {
+"payables": [
+{
+"gross": 438.0,
+"subtotal": 438.0,
+"tax_total": 0.0,
+"discount": null,
+"taxes": [
+[
+0.0,
+0.0
+]
+],
+"line_items": [
+[
+4.0,
+73.0,
+292.0,
+null,
+null,
+[]
+],
+[
+2.0,
+73.0,
+146.0,
+null,
+null,
+[]
+]
+]
+}
+],
+"declined": [],
+"invoice_number": "852566"
+},
+"INV-02": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #59444464164 from Northwind Technology 00 Meridian Logistics OU. ERP gate failed (gross_mismatch:608.23:2450.91;2449.00;2450.91;2450.91): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "59444464164"
+},
+"INV-03": {
+"payables": [
+{
+"gross": 8550.0,
+"subtotal": 7434.78,
+"tax_total": 0.0,
+"discount": null,
+"taxes": [],
+"line_items": [
+[
+1.0,
+8550.0,
+8550.0,
+null,
+null,
+[]
+]
+]
+}
+],
+"declined": [],
+"invoice_number": "9446639440"
+},
+"INV-04": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #INV7097292303 from TAXINVOICE Invoice Date 30Apr2025 LarkspurDistributionMeridianPrint LarkspurDistributionMeridianPrint. ERP gate failed (gross_mismatch:6620.55:4047.00;17157.00;4047.00;4047.00): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "INV7097292303"
+},
+"INV-06": {
+"payables": [
+{
+"gross": 199.98,
+"subtotal": 176.98,
+"tax_total": 23.0,
+"discount": 725.9,
+"taxes": [
+[
+null,
+23.0
+]
+],
+"line_items": [
+[
+1.0,
+44.99,
+44.99,
+null,
+null,
+[]
+],
+[
+1.0,
+24.99,
+24.99,
+null,
+null,
+[]
+],
+[
+1.0,
+25.0,
+25.0,
+null,
+null,
+[]
+],
+[
+1.0,
+25.0,
+25.0,
+null,
+null,
+[]
+],
+[
+1.0,
+25.0,
+25.0,
+null,
+null,
+[]
+],
+[
+1.0,
+25.0,
+25.0,
+null,
+null,
+[]
+],
+[
+1.0,
+56.99,
+56.99,
+null,
+null,
+[]
+],
+[
+1.0,
+39.99,
+39.99,
+null,
+null,
+[]
+],
+[
+1.0,
+39.99,
+39.99,
+null,
+null,
+[]
+],
+[
+1.0,
+69.99,
+69.99,
+null,
+null,
+[]
+],
+[
+1.0,
+72.99,
+72.99,
+null,
+null,
+[]
+],
+[
+1.0,
+72.99,
+72.99,
+null,
+null,
+[]
+],
+[
+1.0,
+69.99,
+69.99,
+null,
+null,
+[]
+],
+[
+1.0,
+69.99,
+69.99,
+null,
+null,
+[]
+],
+[
+1.0,
+113.99,
+113.99,
+null,
+null,
+[]
+],
+[
+1.0,
+125.99,
+125.99,
+null,
+null,
+[]
+]
+]
+}
+],
+"declined": [],
+"invoice_number": "75884754"
+},
+"INV-07": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #INV7097292303 from TAXINVOICE Invoice Date 30Apr2025 LarkspurDistributionMeridianPrint LarkspurDistributionMeridianPrint. ERP gate failed (gross_mismatch:6620.55:4047.00;17157.00;4047.00;4047.00): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "INV7097292303"
+},
+"INV-09": {
+"payables": [],
+"declined": [
+{
+"doc_type": "CUSTOMS_INVOICE",
+"reason": "Invoice #2025/06/06 from Northwind. Customs/consolidated declaration between third parties; the buyer is not a Bolt Group entity and cannot be resolved against chart_of_books. Not a payable addressed to the tenant."
+}
+],
+"invoice_number": "2025/06/06"
+},
+"INV-10": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #19026090057. ERP gate failed (gross_mismatch:594.30:503.27;503.27;503.27;503.27;479.27;527.27): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "19026090057"
+},
+"INV-11": {
+"payables": [
+{
+"gross": 83.21,
+"subtotal": 83.21,
+"tax_total": 0.0,
+"discount": null,
+"taxes": [],
+"line_items": [
+[
+1.0,
+83.21,
+83.21,
+null,
+null,
+[]
+]
+]
+}
+],
+"declined": [],
+"invoice_number": "18109293"
+},
+"INV-13": {
+"payables": [
+{
+"gross": 152587.46,
+"subtotal": 23.0,
+"tax_total": 25023.12,
+"discount": null,
+"taxes": [
+[
+0.0,
+0.0
+],
+[
+24.0,
+25023.12
+]
+],
+"line_items": [
+[
+1.0,
+63479.69,
+63479.69,
+null,
+null,
+[]
+],
+[
+1.0,
+-12695.94,
+-12695.94,
+null,
+null,
+[]
+],
+[
+1.0,
+3173.98,
+3173.98,
+null,
+null,
+[]
+],
+[
+1.0,
+234.86,
+234.86,
+null,
+null,
+[]
+],
+[
+1.0,
+13528.54,
+13528.54,
+null,
+null,
+[]
+],
+[
+1.0,
+8897.68,
+8897.68,
+null,
+null,
+[]
+],
+[
+1.0,
+6976.8,
+6976.8,
+null,
+null,
+[]
+],
+[
+1.0,
+21380.06,
+21380.06,
+null,
+null,
+[]
+],
+[
+1.0,
+-4276.01,
+-4276.01,
+null,
+null,
+[]
+],
+[
+1.0,
+1069.0,
+1069.0,
+null,
+null,
+[]
+],
+[
+1.0,
+875.1,
+875.1,
+null,
+null,
+[]
+],
+[
+1.0,
+1939.8,
+1939.8,
+null,
+null,
+[]
+],
+[
+1.0,
+1075.86,
+1075.86,
+null,
+null,
+[]
+],
+[
+1.0,
+-215.17,
+-215.17,
+null,
+null,
+[]
+],
+[
+1.0,
+53.79,
+53.79,
+null,
+null,
+[]
+],
+[
+1.0,
+119.0,
+119.0,
+null,
+null,
+[]
+],
+[
+1.0,
+20711.63,
+20711.63,
+null,
+null,
+[]
+],
+[
+1.0,
+-2946.89,
+-2946.89,
+null,
+null,
+[]
+],
+[
+1.0,
+736.7,
+736.7,
+null,
+null,
+[]
+],
+[
+1.0,
+1952.18,
+1952.18,
+null,
+null,
+[]
+],
+[
+1.0,
+-1108.87,
+-1108.87,
+null,
+null,
+[]
+],
+[
+1.0,
+160.85,
+160.85,
+null,
+null,
+[]
+],
+[
+1.0,
+2379.2,
+2379.2,
+null,
+null,
+[]
+],
+[
+1.0,
+50.0,
+50.0,
+null,
+null,
+[]
+],
+[
+1.0,
+12.5,
+12.5,
+null,
+null,
+[]
+]
+]
+}
+],
+"declined": [],
+"invoice_number": "127564"
+},
+"INV-14": {
+"payables": [
+{
+"gross": 29253.72,
+"subtotal": 26042.68,
+"tax_total": 3211.04,
+"discount": null,
+"taxes": [
+[
+20.0,
+3211.04
+]
+],
+"line_items": [
+[
+1.0,
+14620.18,
+14620.18,
+null,
+null,
+[]
+],
+[
+1.0,
+9987.5,
+9987.5,
+null,
+null,
+[]
+],
+[
+1.0,
+1435.0,
+1435.0,
+null,
+null,
+[]
+]
+]
+}
+],
+"declined": [],
+"invoice_number": "Parnumnt117"
+},
+"INV-15": {
+"payables": [
+{
+"gross": 29253.72,
+"subtotal": 26042.68,
+"tax_total": 3211.04,
+"discount": null,
+"taxes": [
+[
+20.0,
+3211.04
+]
+],
+"line_items": [
+[
+1.0,
+14620.18,
+14620.18,
+null,
+null,
+[]
+],
+[
+1.0,
+9987.5,
+9987.5,
+null,
+null,
+[]
+],
+[
+1.0,
+1435.0,
+1435.0,
+null,
+null,
+[]
+]
+]
+}
+],
+"declined": [],
+"invoice_number": "Parnumnt117"
+},
+"INV-16": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #952774062 from Northwind Operations O0 Arve number: TLLIR72836045. ERP gate failed (gross_mismatch:26.47:0.00;0.00;0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "952774062"
+},
+"INV-19": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice. ERP gate failed (gross_mismatch:?:0.00;0.00;0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": ""
+},
+"INV-20": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #7856147. ERP gate failed (gross_mismatch:12.10:36.30;36.30;36.30;36.30;26.14;48.40): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "7856147"
+},
+"INV-21": {
+"payables": [],
+"declined": [
+{
+"doc_type": "CUSTOMS_INVOICE",
+"reason": "Invoice #9884313366. Customs/consolidated declaration between third parties; the buyer is not a Bolt Group entity and cannot be resolved against chart_of_books. Not a payable addressed to the tenant."
+}
+],
+"invoice_number": "9884313366"
+},
+"INV-23": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #259684. ERP gate failed (gross_mismatch:52159.92:13625.85;13625.85;13625.85;13625.85;6459.48;136541.46): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "259684"
+},
+"INV-25": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice. ERP gate failed (gross_mismatch:?:0.00;0.00;0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": ""
+},
+"INV-26": {
+"payables": [],
+"declined": [
+{
+"doc_type": "NOT_A_PAYABLE",
+"reason": "Invoice from Rm68. Document is a quote/proforma/delivery note, not an invoice; no payable obligation is being asserted."
+}
+],
+"invoice_number": ""
+},
+"INV-27": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice. ERP gate failed (gross_mismatch:60908.88:0.00;0.00;0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": ""
+},
+"INV-28": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #5506340887 from Oakhaven Systems. ERP gate failed (gross_mismatch:25513.00:456499512.70;456499512.70;456499512.70;456499512.70;456494138.86;456563998.78): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "5506340887"
+},
+"INV-31": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #39015 from 100 Airport KPG III, LLC. PO#16299. ERP gate failed (gross_mismatch:17657.53:252836.07;252836.07;252836.07;252836.07;20017.30;1184111.15): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "39015"
+},
+"INV-32": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #131530 from 215 Req#:131530 4613 Conshohocken Avenue Philadelphia PA 19131. ERP gate failed (gross_mismatch:750.00:0.00;0.00;0.00;0.00;0.00;0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "131530"
+},
+"INV-33": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice from Parked Decument Number: Project NRIC: PD 0 0& \u00b1PD B0?. ERP gate failed (gross_mismatch:?:0.00;0.00;0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": ""
+},
+"INV-34": {
+"payables": [
+{
+"gross": 572.0,
+"subtotal": 520.0,
+"tax_total": 52.0,
+"discount": null,
+"taxes": [
+[
+10.0,
+52.0
+]
+],
+"line_items": [
+[
+1.0,
+520.0,
+1.0,
+null,
+null,
+[]
+]
+]
+}
+],
+"declined": [],
+"invoice_number": ""
+},
+"INV-35": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #1000020040 from Cioxhealth. ERP gate failed (gross_mismatch:30.25:60.75;60.75;60.75;60.75;0.00;60.75): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "1000020040"
+},
+"INV-36": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #44273107 from Oracle. ERP gate failed (gross_mismatch:91580.50:0.00;0.00;0.00): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "44273107"
+},
+"INV-37": {
+"payables": [],
+"declined": [
+{
+"doc_type": "INVOICE",
+"reason": "Invoice #497649 from 1120VERMONTAVENUEASSOCIATES,LLP. ERP gate failed (gross_mismatch:1570.37:1464.77;1825.01;1464.77;1464.77): the printed gross cannot be recovered from the emitted components within 0.01."
+}
+],
+"invoice_number": "497649"
+}
+}

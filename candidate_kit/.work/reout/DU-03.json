@@ -1,0 +1,48 @@
+{
+  "file": "DU-03.pdf",
+  "payables": [
+    {
+      "invoice_number": "202511121178",
+      "invoice_date": "2025-11-14",
+      "due_date": "",
+      "invoice_type": "INVOICE",
+      "currency": "USD",
+      "supplier": {
+        "name": "CARGO PG:1OF",
+        "supplier_id": "",
+        "address": "TYPE :IN-NON-PAYMENT, TYPE SES/, Cadence PTE. LTD. 81/79/6SzJ, TOTALGROSSWT/UNIT: 567.000/KGM, TOTALOUTERPACK/UNIT: 2/PKG",
+        "vat_id": ""
+      },
+      "buyer": {
+        "company_code": "",
+        "business_unit_code": "",
+        "location_code": ""
+      },
+      "payment_term_id": "",
+      "po_number": "RTER",
+      "po_id": "",
+      "gross_total": "722.76",
+      "subtotal": "",
+      "total_tax_amount": "",
+      "discount_amount": "",
+      "freight_charges": "",
+      "insurance_charges": "",
+      "extra_charges": "",
+      "excise_duties": "",
+      "discount": "",
+      "taxes": [
+        {
+          "tax_type": "VAT",
+          "tax_name": "TOT OTHER TAX",
+          "tax_rate": "",
+          "tax_amount": "0.00",
+          "tax_type_code": ""
+        }
+      ],
+      "line_items": [],
+      "duty_declaration_amount": "722.76"
+    }
+  ],
+  "declined": [],
+  "invoice_number": ""
+}

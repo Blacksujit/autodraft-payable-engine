@@ -1,0 +1,11 @@
+{
+  "file": "INV-26.pdf",
+  "payables": [],
+  "declined": [
+    {
+      "doc_type": "NOT_A_PAYABLE",
+      "reason": "Invoice from Rm68. Document is a quote/proforma/delivery note, not an invoice; no payable obligation is being asserted."
+    }
+  ],
+  "invoice_number": ""
+}

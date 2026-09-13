@@ -162,7 +162,8 @@ def parse_amount(token: str) -> Optional[Amount]:
             v = Decimal(int_part) + frac_part / Decimal(100)
         except InvalidOperation:
             return None
-        return Amount(-v if neg else v, token, ambiguous=(s.rfind(",") == -1))
+        return Amount(-v if neg else v, token,
+                     ambiguous=(s.rfind(",") == -1 and s.count(".") > 1))
     elif len(last) == 3 and len(segs) > 1:
         # last sep is a thousands separator: 70.000, 1.234.567
         int_str = "".join(segs)

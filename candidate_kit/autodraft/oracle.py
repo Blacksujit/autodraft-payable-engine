@@ -310,13 +310,25 @@ def _fill_totals(p: dict) -> None:
                 rate = _dec(t.get("tax_rate"))
                 if rate is not None:
                     tax_total += base * rate / Decimal("100")
-    p["subtotal"] = _fmt2(net)
+    if not p.get("subtotal"):
+        p["subtotal"] = _fmt2(net)
     p["total_tax_amount"] = _fmt2(tax_total)
     p["gross_total"] = _fmt2(net + tax_total + charges)
 
 
 def build_payable(doc: ExtractedDoc, declined_reason: str = "") -> dict:
     """Emit the payable that survives the ERP gate; else declare a decline."""
+    dd = (doc.ground or {}).get("duty_declaration")
+    if dd:
+        d = _dec(dd)
+        if d is not None and d > 0:
+            p = _base_payable(doc)
+            p["duty_declaration_amount"] = _fmt2(d)
+            p["gross_total"] = _fmt2(d)
+            p["subtotal"] = ""
+            p["total_tax_amount"] = ""
+            p["_placement"] = "duty_declaration"
+            return p
     if declined_reason:
         return _declined(doc, declined_reason)
     if doc.invoice_type not in ("INVOICE", "TAX_INVOICE", "CREDIT_MEMO", ""):

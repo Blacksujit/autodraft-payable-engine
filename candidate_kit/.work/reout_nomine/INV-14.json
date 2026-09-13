@@ -1,0 +1,87 @@
+{
+  "file": "INV-14.pdf",
+  "payables": [
+    {
+      "invoice_number": "Parnumnt117",
+      "invoice_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "invoice_type": "TAX_INVOICE",
+      "currency": "GBP",
+      "supplier": {
+        "name": "",
+        "supplier_id": "",
+        "address": "",
+        "vat_id": "Number"
+      },
+      "buyer": {
+        "company_code": "BOLTGROUP",
+        "business_unit_code": "GB001",
+        "location_code": "LOC_GB_001"
+      },
+      "payment_term_id": "Net_30",
+      "po_number": "erence",
+      "po_id": "",
+      "gross_total": "29253.72",
+      "subtotal": "26042.68",
+      "total_tax_amount": "3211.04",
+      "discount_amount": "",
+      "freight_charges": "",
+      "insurance_charges": "",
+      "extra_charges": "",
+      "excise_duties": "",
+      "discount": "",
+      "taxes": [
+        {
+          "tax_type": "VAT",
+          "tax_name": "VAT",
+          "tax_rate": "20.00",
+          "tax_amount": "3211.04",
+          "tax_type_code": ""
+        }
+      ],
+      "line_items": [
+        {
+          "description": "ManagementFeeforJune2026",
+          "item_type": "SERVICE",
+          "uom": "",
+          "quantity": "1",
+          "unit_price": "14620.18",
+          "total": "14620.18",
+          "discount": "",
+          "discount_percentage": "",
+          "tax_rate": "",
+          "tax_amount": "",
+          "taxes": []
+        },
+        {
+          "description": "BusinessRatesforJune2026",
+          "item_type": "GOODS",
+          "uom": "",
+          "quantity": "1",
+          "unit_price": "9987.5",
+          "total": "9987.5",
+          "discount": "",
+          "discount_percentage": "",
+          "tax_rate": "",
+          "tax_amount": "",
+          "taxes": []
+        },
+        {
+          "description": "Utilities for June 2026",
+          "item_type": "GOODS",
+          "uom": "",
+          "quantity": "1",
+          "unit_price": "1435",
+          "total": "1435",
+          "discount": "",
+          "discount_percentage": "",
+          "tax_rate": "",
+          "tax_amount": "",
+          "taxes": []
+        }
+      ]
+    }
+  ],
+  "declined": [],
+  "invoice_number": "Parnumnt117"
+}

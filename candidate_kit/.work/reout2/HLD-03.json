@@ -1,0 +1,11 @@
+{
+  "file": "HLD-03.pdf",
+  "payables": [],
+  "declined": [
+    {
+      "doc_type": "CUSTOMS_INVOICE",
+      "reason": "Invoice #3845708. Customs/consolidated declaration between third parties; the buyer is not a Bolt Group entity and cannot be resolved against chart_of_books. Not a payable addressed to the tenant."
+    }
+  ],
+  "invoice_number": "3845708"
+}
