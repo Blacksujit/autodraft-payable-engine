@@ -411,6 +411,17 @@ def process_pdf_detail(pdf_path: str):
         note = decline_reason
     result = format_output(ext, note)
     result["invoice_number"] = ext.invoice_number
+    if note and result.get("declined"):
+        try:
+            from .backends import consult
+
+            if consult.enabled():
+                near = str(ext.gross or ext.subtotal or "total")
+                reply = consult.reread_fragment(ext.page_text, near)
+                if reply:
+                    result["declined"][0]["reason"] = f"{result['declined'][0]['reason']} [consult: {reply}]"
+        except Exception:
+            pass
     return result, ext, raw_payable, placement, note
 
 

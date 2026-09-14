@@ -128,6 +128,39 @@ def _render_page(pdf_path: str, page_no: int = 0) -> str:
     return str(out)
 
 
+def _all_page_numbers(pdf_path: str) -> set[Decimal]:
+    """Grounding evidence = numbers across EVERY page, as the emitter saw them.
+
+    Text-layer pages read via pdfplumber words; scanned pages rendered and
+    OCR'd through the audit's own pipeline (cached in .work).  A doc like
+    INV-03 is a pure scan — zero text-layer chars — so all its amounts exist
+    only in OCR; grounding must include those pages or a correctly-extracted
+    payable gets falsely flagged.
+    """
+    import pdfplumber
+
+    nums: set[Decimal] = set()
+    with pdfplumber.open(pdf_path) as pdf:
+        n = len(pdf.pages)
+        for pno in range(n):
+            txt = ""
+            try:
+                words = pdf.pages[pno].extract_words()
+                if words:
+                    txt = " ".join(w["text"] for w in words)
+            except Exception:
+                txt = ""
+            if not txt or len(txt.strip()) < 12:
+                png = _render_page(pdf_path, pno)
+                if png:
+                    from autodraft.ocr import ocr_words
+
+                    txt = " ".join(w.text for w in ocr_words(png))
+            if txt:
+                nums |= _extract_page_numbers(txt)
+    return nums
+
+
 def _extract_doc(pdf_path: str) -> ExtractedDoc | None:
     """Extract a document for auditing.
 
@@ -327,7 +360,7 @@ def audit_file(pdf_path: str, output_path: str) -> dict:
     if doc is None:
         return {"file": filename, "status": "extract_failed", "issues": ["Extraction failed"]}
 
-    page_numbers = _extract_page_numbers(getattr(doc, "all_page_texts", "") or doc.page_text or "")
+    page_numbers = _all_page_numbers(pdf_path)
 
     all_issues = []
     for payable in payables:

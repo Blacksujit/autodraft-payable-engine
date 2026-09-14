@@ -93,6 +93,26 @@ Your system runs with **one command** over the `documents/` directory and writes
 
 Provide a `README` with a single documented command (a script or a `Dockerfile`) that runs your system over a folder of PDFs and produces these files. We will re-run it.
 
+## Running
+
+```powershell
+# Open corpus -> output/                        (the one command the brief re-runs)
+python -m autodraft documents output
+
+# Held-back "never-seen" set (Phase 5 evidence, same machinery, no special cases)
+python heldback/build_synthetic.py              # regenerate heldback/documents/*.pdf
+python -m autodraft heldback/documents heldback/output
+
+# Optional Phase 4 local-LLM evidence seam (fail-open, narrative-only, OFF by default)
+$env:AUTODRAFT_CONSULT=1; python -m autodraft heldback/documents heldback/output
+```
+
+- `.work/` is a content-hashed OCR cache (gitignored): re-runs are fast and,
+  with `AUTODRAFT_CONSULT` unset, byte-identical from a clean state.
+- `output/` and `heldback/output/` are gitignored and fully regenerable.
+- Measured results and honest distances: `docs/ROADMAP.md` (launch-day status)
+  and `heldback/REPORT.md`.
+
 ## Three rules — enforced, and also clues
 
 1. **Every value you emit must appear on the document.** A number that is in your output only because it made the total come out right disqualifies that payable. If you are ever tempted to invent a figure to balance the books, the temptation is telling you something true about the document — listen to it instead of acting on it.

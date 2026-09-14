@@ -134,3 +134,30 @@ state; graduated format: passing per-doc report in hand.
 - **`winsdk` unavailable on py3.14** — Windows built-in OCR is not used;
   RapidOCR is the single OCR path (simpler, and identical behaviour on the
   held-back set).
+
+---
+
+## Launch-day status (measured, not assumed)
+
+| Gate | Intent | Status verified today |
+|------|--------|----------------------|
+| G0 | all-page renders + OCR | Done; page cache under `.work/` (gitignored) |
+| G1 | text-layer extraction known-good | Done for the English families that book; line-item carving still misses foreign/localized header tables (see G2) |
+| G2 | `erp_book(payable) == printed gross` on ≥ half the corpus | **38 % honest current value** — 16 of 42 book; every other file declines with a named gate; 0 errors, 0 invented numbers. 26 declines share one root cause (line-item reconstruction), which the held-back set isolates and Phase 4 points at |
+| G3 | no force-booking | Holds: every row is oracle-matching (`payables[]`) or `declined[]` with the failing gate named |
+| G4 | local-LLM seam, low-confidence only, fail-open | Shipped & proven: `autodraft/backends/` (Ollama + consult), `AUTODRAFT_CONSULT=1` re-phrases decline evidence as `[consult: …]`; default run stays byte-deterministic |
+| G5 | synthetic “never-seen” set, same machinery | Done: `heldback/build_synthetic.py` → 11 docs, all run through identical machinery; report at `heldback/REPORT.md`. Distances measured: 8/8 bookable GAP (line-item root cause), 3/3 refusables HIT incl. the provably-unsolvable doc. The sweep already paid one real, general fix (customs cue `\biva\b`/`\bimpuesto\b` removal → INV-34 newly books, 15→16, nothing lost) |
+| G6 | one-command reproducible from clean state | Holds: `python -m autodraft documents output`; `.work/` cache is content-hashed so a second run is fast and byte-identical (consult off); `output/` and `heldback/output/` are gitignored and regenerable |
+
+Launch-day verification commands:
+
+```
+python -m autodraft documents output                 # open corpus
+python heldback/build_synthetic.py                    # regenerate held-back PDFs
+python -m autodraft heldback/documents heldback/output
+$env:AUTODRAFT_CONSULT=1; python -m autodraft heldback/documents heldback/output   # Phase 4 seam (optional)
+```
+
+Unverified-honestly: G2's ≥ half target is **not** met; the 38 % number is the
+measured distance the next iteration must shrink, and the held-back set is the
+fixed yardstick for that.
