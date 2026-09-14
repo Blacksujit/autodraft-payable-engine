@@ -22,7 +22,7 @@ Legend: **D** = deterministic core · **L** = local LLM consult · **G** = gate
       rest of the stack is preinstalled).
 - [x] Confirm `pymupdf` (use `import pymupdf`, not `fitz`), `pdfplumber`,
       Ollama (`moondream`, `llava:7b`, `llama3.2`, `nomic-embed-text`).
-- [x] Corpus survey: 43 PDFs / 111 pages; 7 text-layer (English); 36 image scans.
+- [x] Corpus survey: 42 PDFs / 111 pages; 6 text-layer (English); 36 image scans.
 - [x] Probe OCR quality for both scanned (INV-01) and low-fi (HLD-01, DU-02)
       pages; RapidOCR returns `[quad, text, conf]`, ~6–10 s/page, coordinates
       ~3× page scale ⇒ downstream geometry is 100% ratio-based.
@@ -111,7 +111,7 @@ or declined *with the failing gate named*.
 
 ## Phase 6 — Release packaging + DESIGN.md
 
-17. `output/*.json` for all 43 files, re-runnable in one command.
+17. `output/*.json` for all 42 files, re-runnable in one command.
 18. `DESIGN.md` (≤3 pages) answering the brief's three questions honestly.
 19. README (system run instructions) + final verification sweep.
 

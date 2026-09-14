@@ -35,7 +35,7 @@ Two consequences drive the whole design:
   ERP recomputes a different gross even though "the total looks fine". Placement
   is a correctness constraint, not a style choice.
 - **The held-back set out-weights the open set.** The reported metric is the
-  *distance* between open and held-back performance. Fitting the 43 open
+  *distance* between open and held-back performance. Fitting the 42 open
   documents is strategically pointless; building machinery that generalises is
   everything. There is therefore **zero per-file special-casing** in the system.
 
