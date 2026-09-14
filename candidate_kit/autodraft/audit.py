@@ -150,12 +150,22 @@ def _all_page_numbers(pdf_path: str) -> set[Decimal]:
                     txt = " ".join(w["text"] for w in words)
             except Exception:
                 txt = ""
-            if not txt or len(txt.strip()) < 12:
+            text_nums = _extract_page_numbers(txt) if txt else set()
+            # A sparse text layer (a few tokens, or only 1-2 numbers) is a scan
+            # in disguise: pages like INV-35 carry a short overlay ("Zycus PO#
+            # ...") while the real money values live in the rendered image.
+            # Fall back to OCR and UNION evidence so a correctly-extracted
+            # payable is never falsely flagged.
+            if not txt or len(txt.strip()) < 12 or len(text_nums) < 3:
                 png = _render_page(pdf_path, pno)
                 if png:
                     from autodraft.ocr import ocr_words
 
-                    txt = " ".join(w.text for w in ocr_words(png))
+                    ocr_txt = " ".join(w.text for w in ocr_words(png))
+                    if ocr_txt:
+                        nums |= text_nums
+                        nums |= _extract_page_numbers(ocr_txt)
+                        continue
             if txt:
                 nums |= _extract_page_numbers(txt)
     return nums
@@ -245,6 +255,19 @@ def _check_grounding(payable: dict, page_numbers: set[Decimal], filename: str) -
                 deriv = [sub, sub - tax, sub + freight, sub + freight - tax]
                 found = any(
                     abs(val - d) <= Decimal("0.02") for d in deriv)
+        if not found and val == 1 and path.startswith("payable.line_items["):
+            # Documents without a quantity column book "one unit at that
+            # price": qty=1 is a structural derivation, not a page word.  It
+            # is only grounded when the line's unit price equals its printed
+            # total (the emitter's convention), otherwise it is a real value
+            # and must appear on the page.
+            m = re.match(r"payable\.line_items\[(\d+)\]\.quantity", path)
+            if m:
+                li = payable["line_items"][int(m.group(1))]
+                up = _dec(li.get("unit_price"))
+                tot = _dec(li.get("total"))
+                if up is not None and tot is not None and abs(up - tot) <= Decimal("0.02"):
+                    found = True
         if not found:
             closest = (min(page_numbers, key=lambda x: abs(x - val))
                        if page_numbers else None)

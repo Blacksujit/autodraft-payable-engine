@@ -291,7 +291,7 @@ _GROSS_LABELS = [
     re.compile(r"(?:Endbetrag|Gesamtsumme|Gesamtbetrag|Brutto|Rechnungsbetrag|Zu\s*zahlen|Summe\s*inkl|Netto\s*inkl)", re.I),
     re.compile(r"(?:Total|Amount\s*(?:Due|Payable)|Balance\s*Due|Grand\s*Total|Invoice\s*Total|Gross(?:\s*Total)?|Net\s*Total|Amount\s*Due)", re.I),
     re.compile(r"(?:Arvekokku|Tasuda|Kokku|Summakoosk\w*maksuga|Tasumata|Summa\s*koos|K\w*maksuga)", re.I),
-    re.compile(r"(?:Totaal|Verschuldigd|Including\s*VAT|Incl\.?\s*VAT|Tax\s*Invoice|Total\s*Bill|Faktura\s*total)", re.I),
+    re.compile(r"(?:Totaal|Verschuldigd|Including\s*VAT|Incl\.?\s*VAT|Tax\s*Invoice|Total\s*Bill|Faktura\s*total|Totale\s*Fattura|Totale\s*Documento)", re.I),
 ]
 
 # Unmistakable total labels, used as the primary GROSS source (on the
@@ -302,18 +302,19 @@ _STRONG_TOTAL_LABELS = [
     re.compile(r"(?:Endbetrag|Gesamtsumme|Gesamtbetrag|Brutto|Rechnungsbetrag|Zu\s*zahlen|Summe\s*inkl|Netto\s*inkl)", re.I),
     re.compile(r"(?:Grand\s*)?Total\b|Amount\s*(?:Due|Payable)|Balance\s*Due|Invoice\s*Total|Gross(?:\s*Total)?|Net\s*Total", re.I),
     re.compile(r"(?:Arvekokku|Tasuda|Tasumata|Kokku|Summakoosk\w*maksuga|Summa\s*koos|K\w*maksuga)", re.I),
-    re.compile(r"Totaal|Verschuldigd", re.I),
+    re.compile(r"Totaal|Verschuldigd|Totale\s*Fattura|Totale\s*Documento", re.I),
 ]
 _SUB_LABELS = [
     re.compile(r"(?:Zwischensumme|Subtotal|Sub-total|Sub\s*Total|Sub\s*Tot|Totaal\s*excl|Netto|Net\s*(?:amount|total)?|Summe\s*(?:vor|ohne|exkl)|Betrag\s*netto)", re.I),
-    re.compile(r"(?:Summailmak\w*maksuta|Vahesumma|Summa\s*ilma|Summa\s*enne|Summa\s*neto|Kokku)", re.I),
+    re.compile(r"(?:Summailmak\w*maksuta|Vahesumma|Summa\s*ilma|Summa\s*enne|Summa\s*neto|Kokku|Summa\b)", re.I),
     re.compile(r"(?:Amount|Price|Package\s*Price)\s*(?:Sub)?\s*total", re.I),
+    re.compile(r"(?:Montant\s*HT|Total\s*HT|Hors\s*taxes|Sous-total|Imponibile|Base\s*imponibile)", re.I),
 ]
 
 _SUBTOTAL_MASK = re.compile(r"Sub(?:\s+|[\-\u2010-\u2015])*(?:Total|Tot)\b|Subtotal\b", re.I)
 _TAX_TOTAL_LABELS = [
     re.compile(r"(?:Total\s*VAT|Allocated\s*Sales\s*Tax|VAT\s*Amount|VAT\s*Included|Input\s*VAT|Output\s*VAT|Sales\s*Tax|U\s*I\s*T)", re.I),
-    re.compile(r"(?:MwSt|Mehrwertsteuer|USt|Umsatzsteuer|VAT|IVA|BTW|K\w*maks)", re.I),
+    re.compile(r"(?:MwSt|Mehrwertsteuer|USt|Umsatzsteuer|VAT|IVA|BTW|TVA|Taxe\s*sur\s*la\s*valeur|K\w*maks|KM\b)", re.I),
 ]
 _DISC_LABELS = [
     re.compile(r"(?:Rabatt|Discount|Soodustus|Diskont|Reduction|Allowance)", re.I),
@@ -1020,6 +1021,11 @@ def _is_summary_row(desc: str, qty: str, unit: str, total: str) -> bool:
     # Summary keywords in description
     if any(pat.search(low) for pat in _SUMMARY_LABELS):
         return True
+    # Gross/subtotal/total label rows (e.g. 'Gesamtbetrag', 'Zwischensumme',
+    # 'Montant HT', 'Totale Fattura') are never line items even when their
+    # amount sits outside the qty/unit/total role columns.
+    if any(pat.search(low) for pat in _BAL_LABELS + _STRONG_TOTAL_LABELS + _GROSS_LABELS + _SUB_LABELS):
+        return True
     # Tax lines with totals but no quantities are summary rows (tax totals)
     if _is_tax_label(desc) and total and not qty:
         return True
@@ -1687,7 +1693,19 @@ def extract(layout: PageLayout) -> ExtractedDoc:
                 # Only rows that are summary/tax totals (skipped as line items)
                 if not (_is_summary_row(_desc, _q, _u, _t) or _is_tax_label(_desc) or _is_metric_row(_desc)):
                     continue
-                _moneys = [str(_money_token(x)) for x in (_q, _u, _t) if x and _money_token(x) is not None]
+                _moneys = [_clean_amt(x) for x in (_q, _u, _t) if x and _clean_amt(x) is not None]
+                if not _moneys:
+                    # The row is a summary/tax line whose amount sits in a
+                    # column the role model did not pick as qty/unit/total
+                    # (e.g. a totals cluster split across columns 3/4).  Grab
+                    # whatever money tokens the row actually carries.
+                    _row_moneys = []
+                    for _c in sorted(layout.table.rows[_r]):
+                        _cell_t = layout.table.cell(_r, _c)
+                        _t_clean = _clean_amt(_cell_t) if _cell_t else None
+                        if _t_clean is not None:
+                            _row_moneys.append(_t_clean)
+                    _moneys = _row_moneys
                 _lines.append((_desc + " " + " ".join(_moneys)).strip())
             summary_rows_text = "\n".join(_lines)
         except Exception:
