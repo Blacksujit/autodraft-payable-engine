@@ -14,6 +14,20 @@ python -m autodraft documents output
 - Each JSON: `{ "file": "...", "payables": [...], "declined": [...] }`
 - Payables conform to `AUTODRAFT_SCHEMA.md`; declined items explain why not a payable
 
+### Live demo / review mode
+
+```bash
+python -m autodraft demo                # interactive menu over documents + held-back corpus
+python -m autodraft demo --doc INV-01   # one-document report (fields, taxes, ERP gate, audit)
+python -m autodraft demo --all          # verdict table for every PDF (PASS / DECLINED / ERROR)
+python -m autodraft demo --json out     # also write the emitted JSON records
+```
+
+The demo runs the exact same pipeline and ERP gate as the batch path, so a
+reviewer can reproduce the headline claim on documents the machine has never
+seen (the `held-back` corpus is included and tagged `[H]`; ground-truth gross
+is shown for expected ones).
+
 ## Requirements
 
 - Python 3.10+
