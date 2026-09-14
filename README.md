@@ -11,6 +11,7 @@ The system exists to solve a practical and difficult problem: reading supplier i
 - [Mission](#mission)
 - [Why this project matters](#why-this-project-matters)
 - [Quick Start](#quick-start)
+- [Live demo / review mode](#live-demo--review-mode)
 - [Architecture](#architecture)
 - [Requirements](#requirements)
 - [Key technical behavior](#key-technical-behavior)
@@ -76,6 +77,30 @@ Example output:
   "declined": []
 }
 ```
+
+---
+
+## Live demo / review mode
+
+The batch path is great for production, but for verifying the pipeline there is
+an interactive review CLI. It runs the **same** pipeline and the **same** ERP
+gate on every document — including the held-back corpus the machine has never
+been tuned against — so an evaluator can reproduce the honesty claim in real
+time.
+
+```bash
+python -m autodraft demo                # interactive menu over open + held-back corpus
+python -m autodraft demo --doc INV-01   # one-document report: fields, taxes, ERP gate, audit
+python -m autodraft demo --all          # verdict table for every PDF (PASS / DECLINED / ERROR)
+python -m autodraft demo --json out     # also write the emitted JSON records
+```
+
+A per-document report shows the emitted payable (totals, taxes, line items),
+which tax-placement variant was applied, the ERP recompute against the printed
+gross (`GATE PASS` / `GATE FAIL`), and a fidelity audit confirming every
+emitted number is grounded on the page. Held-back documents are tagged `[H]`
+and their expected ground-truth gross is shown when known, so a mismatch is
+never hidden.
 
 ---
 
@@ -238,6 +263,9 @@ This is a core requirement for financial automation, where wrong output is more 
 3. Review generated `output/*.json`
 4. Check any entries in `declined[]`
 5. Keep the pipeline conservative and auditable
+
+For ad-hoc verification of a single document or the full held-back corpus, use
+`python -m autodraft demo` (see [Live demo / review mode](#live-demo--review-mode)).
 
 ---
 
