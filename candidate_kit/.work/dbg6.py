@@ -1,24 +1,23 @@
-import sys, os, json
-sys.path.insert(0, r"D:\candidate_kit\candidate_kit")
-os.chdir(r"D:\candidate_kit\candidate_kit")
-import autodraft.pipeline as P
-import autodraft.oracle as O
-import erp as ERP
-P.WORK_DIR = P.Path(r"D:\candidate_kit\candidate_kit\.work")
-
-for f in ["INV-11","INV-14","INV-16"]:
-    exts = P._extract_doc("documents/%s.pdf"%f)
-    e = exts if not isinstance(exts, tuple) else exts[0]
-    print("==== %s: gross=%r" % (f, e.gross))
-    print("  items:", len(e.line_items), "taxes:", len(e.taxes))
-    p = O._variant_keep(e)
-    try:
-        r = ERP.erp_book(p)
-        print("  keep: will_book=%s items=%d" % (r["will_book_gross"], len(p["line_items"])))
-    except Exception as ex:
-        print("  keep: ERROR", ex)
-    for li in p["line_items"][:5]:
-        print("    li:", dict(li))
-    if p.get("taxes"):
-        print("    taxes:", p["taxes"])
-    print()
+﻿import sys, os
+sys.path.insert(0, os.getcwd())
+from pathlib import Path
+from autodraft.ocr import ocr_words
+from autodraft.structure import build_layout
+from autodraft.fields import extract
+DOC=Path("documents"); WORK=Path(".work")/"pages"
+name="INV-06"
+import pymupdf
+d=pymupdf.open(str(DOC/(name+".pdf"))); pc=len(d); d.close()
+print("pages:",pc)
+for pg in range(pc):
+    pp=WORK/f"{name}_p{pg+1}.png"
+    w=ocr_words(str(pp))
+    lay=build_layout(str(pp), pg, w)
+    e=extract(lay)
+    gg=(e.ground or {}).get("gross")
+    pt=(e.page_text or "").replace("\n"," | ")
+    print(f"p{pg}: gross={e.gross!r} ground={gg!r} sub={e.subtotal!r} tax={e.tax_total!r} disc={e.discount_amount!r} lnx={len(pt)}")
+    print("   head:", repr(pt[:110]))
+    for probe in ["169.83","1683.98","1633.98","199.98","176.98","725.90","23.00","50.00"]:
+        i=pt.find(probe.replace(",",""))
+        if i>=0: print(f"     has {probe}: ...{pt[max(0,i-40):i+30]!r}")

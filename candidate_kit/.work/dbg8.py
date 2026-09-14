@@ -1,20 +1,17 @@
-import sys, os
-sys.path.insert(0, r"D:\candidate_kit\candidate_kit")
-os.chdir(r"D:\candidate_kit\candidate_kit")
+﻿import sys, os
+sys.path.insert(0, os.getcwd())
+from pathlib import Path
+import autodraft.fields as F
 import autodraft.pipeline as P
-from autodraft.ocr import ocr_words
-from autodraft.structure import build_layout
-P.WORK_DIR = P.Path(r"D:\candidate_kit\candidate_kit\.work")
-
-for f in ["INV-11"]:
-    ndoc = P.pymupdf.open("documents/%s.pdf"%f)
-    npg = len(ndoc)
-    ndoc.close()
-    print("==== %s (%d pages)" % (f, npg))
-    for pg in range(npg):
-        P._render_page("documents/%s.pdf"%f, pg)
-        words = ocr_words(P.WORK_DIR / ("%s_p%d.png"%(f,pg+1)))
-        lay = build_layout(str(P.WORK_DIR / ("%s_p%d.png"%(f,pg+1))), pg, words)
-        print("-- page %d: %d lines, %d items in table" % (pg+1, len(lay.get("lines",[])), len(lay.get("table",[]))))
-        for r in lay.get("table", []):
-            print("   row:", r)
+ext, texts = P._extract_doc(str(Path("documents")/"INV-06.pdf"))
+for pi,t in enumerate(texts):
+    print(f"----- page {pi} ({len(t.splitlines())} lines)")
+    for li,line in enumerate(t.splitlines()):
+        items=[]
+        for pat in F._STRONG_TOTAL_LABELS:
+            for m in pat.finditer(line.lower()):
+                it=F._window_read(line, m.end())
+                if it: items.append((m.group(0), it))
+        print(f"  L{li}: {line[:110]!r}")
+        for lab,it in items[:6]:
+            print(f"      STRONG[{lab}] -> {[(str(x[0]),bool(x[1]),x[2]) for x in it[:3]]}")

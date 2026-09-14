@@ -205,17 +205,27 @@ def _repair_roles_with_data(table, roles, header):
     if not data_cols:
         return
     ordered = sorted(data_cols)
+    qty = roles.get("qty", -1)
+    unit = roles.get("unit", -1)
+    total = roles.get("total", -1)
 
-    for role in ("total", "unit"):
-        cur = roles.get(role, -1)
-        if cur >= 0 and col_has_money(cur):
-            continue
-        if ordered:
-            roles[role] = ordered[-1] if role == "total" else ordered[0]
-            if roles["total"] == roles["unit"]:
-                ordered_excl = [c for c in ordered if c != roles["total"]]
-                if ordered_excl:
-                    roles[role] = ordered_excl[-1] if role == "total" else ordered_excl[0]
+    # The last data-bearing money column is the natural line total.  When a
+    # header already carried qty, ensure unit/total never alias the quantity
+    # column; a layout with only "Quantity | Amount" columns has no unit price
+    # column and the Amount column plays the total role.
+    if total < 0 or not col_has_money(total):
+        candidates = [c for c in ordered if c != qty]
+        roles["total"] = candidates[-1] if candidates else -1
+        if roles["total"] >= 0 and roles["total"] == unit:
+            # Amount column doubled as both unit and total - there is no
+            # separately printed unit price; keep it as the line total.
+            roles["unit"] = -1
+    if unit < 0 or not col_has_money(unit):
+        candidates = [c for c in ordered if c != roles["total"] and c != qty]
+        roles["unit"] = candidates[0] if candidates else -1
+    if roles["total"] >= 0 and roles["total"] == roles["qty"]:
+        candidates = [c for c in ordered if c != roles["qty"]]
+        roles["total"] = candidates[-1] if candidates else -1
 
 
 def _split_qty_uom(tok: str) -> Tuple[Optional[Decimal], str]:
@@ -249,6 +259,8 @@ _INV_NO_RE = [
     # Specific invoice number patterns - avoid matching supplier names like "Northwind"
     # Require at least one digit in the captured group
     re.compile(r"(?:Rechnungs?Nr\.?|Rechnungsnummer|Invoice\s*(?:number|no)\.?|Doc(?:ument)?\s*(?:#|no))\s*[:#]?\s*([A-Za-z0-9]*[0-9][A-Za-z0-9/\-]{2,})", re.I),
+    # Estonian / Nordic invoice-number labels ("Arve nr.: 18533", "Faktuuri nr")
+    re.compile(r"(?:Arve\s*(?:nr\.?|number)|[Aa]rvenr\.?|Faktuuri\s*nr\.?|Faktuurinumber)\s*[:#]?\s*([A-Za-z0-9]*[0-9][A-Za-z0-9/\-]{2,})", re.I),
     # Fallback: standalone INV... or similar patterns with digits
     re.compile(r"\b(INV[0-9][A-Za-z0-9/\-]{4,})\b", re.I),
     re.compile(r"\b([0-9]{6,})\b"),  # 6+ digit numbers as last resort
@@ -281,9 +293,20 @@ _GROSS_LABELS = [
     re.compile(r"(?:Arvekokku|Tasuda|Kokku|Summakoosk\w*maksuga|Tasumata|Summa\s*koos|K\w*maksuga)", re.I),
     re.compile(r"(?:Totaal|Verschuldigd|Including\s*VAT|Incl\.?\s*VAT|Tax\s*Invoice|Total\s*Bill|Faktura\s*total)", re.I),
 ]
+
+# Unmistakable total labels, used as the primary GROSS source (on the
+# subtotal-masked text).  Unlike _GROSS_LABELS these never fire on bare
+# "Incl. VAT"/"Tax Invoice" sub-qualifiers, so lines like
+# "Sub-total incl. VAT 1,633.98" cannot win over "Total incl. VAT 1,683.98".
+_STRONG_TOTAL_LABELS = [
+    re.compile(r"(?:Endbetrag|Gesamtsumme|Gesamtbetrag|Brutto|Rechnungsbetrag|Zu\s*zahlen|Summe\s*inkl|Netto\s*inkl)", re.I),
+    re.compile(r"(?:Grand\s*)?Total\b|Amount\s*(?:Due|Payable)|Balance\s*Due|Invoice\s*Total|Gross(?:\s*Total)?|Net\s*Total", re.I),
+    re.compile(r"(?:Arvekokku|Tasuda|Tasumata|Kokku|Summakoosk\w*maksuga|Summa\s*koos|K\w*maksuga)", re.I),
+    re.compile(r"Totaal|Verschuldigd", re.I),
+]
 _SUB_LABELS = [
     re.compile(r"(?:Zwischensumme|Subtotal|Sub-total|Sub\s*Total|Sub\s*Tot|Totaal\s*excl|Netto|Net\s*(?:amount|total)?|Summe\s*(?:vor|ohne|exkl)|Betrag\s*netto)", re.I),
-    re.compile(r"(?:Summailmak\w*maksuta|Vahesumma|Summa\s*ilma|Summa\s*enne|Summa\s*neto)", re.I),
+    re.compile(r"(?:Summailmak\w*maksuta|Vahesumma|Summa\s*ilma|Summa\s*enne|Summa\s*neto|Kokku)", re.I),
     re.compile(r"(?:Amount|Price|Package\s*Price)\s*(?:Sub)?\s*total", re.I),
 ]
 
@@ -352,16 +375,30 @@ def _label_amount(text: str, labels: List[re.Pattern], prefer_last: bool = False
     for line in text.splitlines():
         low = line.lower()
         if prefer_last:
-            items: List[tuple] = []
-            for pat in labels:
-                for m in pat.finditer(low):
-                    items.extend(_window_read(line, m.end()))
-            if not items:
-                continue
-            strong = [(pos, v) for pos, s, v in items if s]
-            if strong:
-                return max(strong, key=lambda t: _rel(t[1]))[1]
-            return max(items, key=lambda t: _rel(t[1]))[1]
+            # Whole-text scan: totals sit at the bottom of the document, so the
+            # LAST line is the most reliable.  Among lines, a STRONG money
+            # amount (>=5 digits, 2 decimals) beats any weaker one on a later
+            # line (handles "Total Qty 14" style decoys), and within a line the
+            # largest amount wins (handles "Total 1,683.98 VAT Amount 169.83").
+            best_line = -1
+            best_items: List[tuple] = []
+            strong_line = -1
+            strong_items: List[tuple] = []
+            for idx, line in enumerate(text.splitlines()):
+                items: List[tuple] = []
+                for pat in labels:
+                    for m in pat.finditer(line.lower()):
+                        items.extend(_window_read(line, m.end()))
+                if not items:
+                    continue
+                best_line, best_items = idx, items
+                if any(s for _, s, _ in items):
+                    strong_line, strong_items = idx, items
+            if strong_line >= 0:
+                return max(strong_items, key=lambda t: _rel(t[2]))[2]
+            if best_line >= 0:
+                return max(best_items, key=lambda t: _rel(t[2]))[2]
+            return ""
         else:
             for pat in labels:
                 m = pat.search(low)
@@ -407,14 +444,68 @@ def _amount_after_label(cand: str, window: str) -> Optional[str]:
     after = window[local + len(cand):local + len(cand) + 2].strip()
     if after.startswith("%"):
         return None
+    # Bare-integer decoys (no cents, no currency sign) are never a money
+    # amount: they are rates, years, phone/vat/reg fragments (e.g. a 56-char
+    # label window truncating "Kontakt:+19026090057" into "1902"), quantities
+    # or part of "Amount in words".  Currency signs travel with the candidate.
+    if not re.search(r"[.,]", cand) and not (cand and cand[0] in "E\u20ac$\u00a3"):
+        return None
     return _clean_amt(cand)
 
 
+_TAX_REG_ID_RE = re.compile(r"\b(?:reg(?:istration)?|no\.?|number|nr\.?|id|#)\b", re.I)
+
+
+def _tax_label_amount(text: str, labels: List[re.Pattern], exclude=()) -> str:
+    """Like _label_amount but rejects VAT registration-number pseudo-labels
+    (e.g. 'VAT Reg. No: 5471258869') and implausibly large totals (which are
+    typically a registration number, not a tax amount).
+
+    Matching is two-pass.  Pass 1 scans the explicit tax labels
+    ('VAT Amount', 'Total VAT', ...).  Pass 2 falls back to the generic
+    'VAT'/'tax' labels.  A candidate that equals one of the *excluded*
+    header components (already bound as the subtotal/gross) is skipped, so a
+    'Sub-total incl. VAT 1,633.98' line can no longer masquerade as a tax
+    amount while a real 'VATAmount 169.83' line later in the summary is still
+    picked up."""
+    def _norm_amt(s: str):
+        try:
+            return (Decimal(s.replace(",", ".")) * 100).quantize(Decimal("1"))
+        except Exception:
+            return None
+
+    excl = {n for n in (_norm_amt(x) for x in exclude) if n is not None}
+    for lpass in (labels, _TAX_TOTAL_LABELS):
+        for line in text.splitlines():
+            for pat in lpass:
+                for m in pat.finditer(line.lower()):
+                    if _TAX_REG_ID_RE.search(line[m.end():m.end() + 20]):
+                        continue
+                    window = line[m.end():m.end() + 64]
+                    for c in reversed(_amt_candidates(window)):
+                        v = _amount_after_label(c, window)
+                        if v is None:
+                            continue
+                        try:
+                            if abs(Decimal(v.replace(",", "."))) > Decimal("1000000"):
+                                continue
+                        except Exception:
+                            continue
+                        if _norm_amt(v) in excl:
+                            continue
+                        return v
+    return ""
+
+
 def _label_ground(text: str, labels: List[re.Pattern]) -> str:
+    """Return the *label text* matched by the first label in the first line.
+    (Returns the matched label, not the whole line, so grounding reflects why
+    a value was bound - e.g. 'Total' - rather than a dumped line fragment.)"""
     for line in text.splitlines():
         for pat in labels:
-            if pat.search(line):
-                return line
+            m = pat.search(line)
+            if m:
+                return m.group(0)
     return ""
 
 _PO_RE = re.compile(
@@ -621,7 +712,7 @@ def _extract_taxes(header_text: str, footer_text: str, g: Dict[str, str]) -> Tup
     low = txt
     
     # First, try to get tax total from explicit labels (most reliable)
-    total = _label_amount(low, _TAX_TOTAL_LABELS)
+    total = _tax_label_amount(low, _TAX_TOTAL_LABELS)
     if total:
         g.setdefault("tax_total", _label_ground(low, _TAX_TOTAL_LABELS))
 
@@ -690,11 +781,30 @@ def _extract_taxes(header_text: str, footer_text: str, g: Dict[str, str]) -> Tup
         near_tax_label = any(k in context for k in ("vat", "gst", "mwst", "ust", "iva", "btw", "moms", "sst", "steuer", "tax", "kaibemaks", "moms", "k.maks", "mva"))
         if not near_tax_label:
             continue
-        tail = low[m.end():m.end() + 48]
+        tail = low[m.end():m.end() + 56]
         am = re.search(r"([\d][\d.,]{1,15})", tail)
         if not am:
             continue
-        amt = _clean_amt(am.group(1))
+        between = tail[:am.start()].strip(" :.\t\n-")
+        # If a label word sits between the percent and the figures (e.g.
+        # "Kaibemaks 24%: Tasuda: 594,30 115,03") the printed VAT figure is the
+        # LAST money token ("115,03"), the earlier one being the gross.  Without
+        # such a word the figures are product-table columns, not a tax summary.
+        has_label_word = bool(re.search(r"[^\W\d]", between))
+        if has_label_word:
+            toks = [(t, _clean_amt(t)) for t in re.findall(r"[\d][\d.,]{1,15}", tail)]
+            toks = [(t, v) for t, v in toks if v is not None]
+            if not toks:
+                continue
+            amt = toks[-1][1]
+        else:
+            # Guard: product-row leak - when the matched amount is immediately
+            # followed by another numeric column value (e.g. "20% 457.24 2,743.44":
+            # Unit VAT + unit price + net total), it is a product-table column row,
+            # not a tax summary line.
+            if re.match(r"\s*\d", tail[am.end():am.end() + 4]):
+                continue
+            amt = _clean_amt(am.group(1))
         if amt is None:
             continue
         # Reject amounts that are clearly not tax amounts (too large, or match subtotal/gross)
@@ -704,10 +814,9 @@ def _extract_taxes(header_text: str, footer_text: str, g: Dict[str, str]) -> Tup
             continue
         if amt_val > 1000000:  # unlikely tax amount
             continue
-        # Guard: product-row leak — when the matched amount is immediately followed by another
-        # numeric column value (e.g. "20% 457.24 2,743.44": Unit VAT + unit price + net total),
-        # it is a product-table column row, not a tax summary line.
-        if re.match(r"\s*\d", tail[am.end():am.end() + 4]):
+        # Skip exact duplicates already captured by the explicit tax-summary regex
+        if any(_rate_str(t.tax_rate) == _rate_str(rate_str)
+               and _clean_amt(t.tax_amount) == amt for t in items):
             continue
         label = tail[:am.start()].strip(" :.\t\n-")
         if not label and len(rate_str) > 4:
@@ -744,6 +853,10 @@ def _extract_taxes(header_text: str, footer_text: str, g: Dict[str, str]) -> Tup
         for m in re.finditer(r"\b(gst|vat|mwst|ust|iva|btw|moms|sst|tax|steuer|k\w*maks|tax)\b", low_footer, re.I):
             label = m.group(0)
             tail = low_footer[m.end():m.end() + 64]
+            # Skip VAT registration numbers ("VAT Reg. No: 547...") - these match
+            # the bare 'vat' label but are an ID, not a tax amount.
+            if _TAX_REG_ID_RE.search(tail[:24]):
+                continue
             # Skip total/summary lines (e.g. "Total Inc GST $572.00" is the gross, not a tax line)
             before = low_footer[max(0, m.start() - 24):m.start()]
             if any(kw in before for kw in ("total", "amount due", "amount payable", "balance")):
@@ -758,6 +871,11 @@ def _extract_taxes(header_text: str, footer_text: str, g: Dict[str, str]) -> Tup
                 continue
             amt = _clean_amt(am.group(1))
             if amt is None:
+                continue
+            try:
+                if float(amt.replace(",", ".")) > 1000000:  # unlikely tax amount
+                    continue
+            except ValueError:
                 continue
             low2 = m.group(0).lower()
             tax_type = "VAT"
@@ -879,6 +997,20 @@ def _is_tax_label(desc: str) -> bool:
         return False
     low = desc.lower().strip()
     return any(pat.search(low) for pat in _TAX_LABELS)
+
+
+def _is_metric_row(desc: str) -> bool:
+    """Detect summary/metric rows whose desc is a *concatenated* label the
+    word-boundary `_TAX_LABELS` regex misses (e.g. 'VATAmount', 'GSTotal'), or
+    a transport/freight line ('Delivery Cost').  Such rows print header-level
+    figures (tax/freight) but still look like line items, so feed them to the
+    totals extractor when building the summary text block."""
+    if not desc:
+        return False
+    low = desc.lower().strip()
+    if re.match(r"(?:vat|gst|tax|mwst|iva|btw|ust|moms|k\w*maks)", low):
+        return True
+    return any(pat.search(low) for pat in _FREIGHT_LABELS)
 
 def _is_summary_row(desc: str, qty: str, unit: str, total: str) -> bool:
     """Detect summary/total rows that should not be line items."""
@@ -1278,12 +1410,17 @@ def _extract_totals(header_text: str, footer_text: str, line_sum: Decimal,
     gross = _label_amount(txt, _BAL_LABELS, prefer_last=True)
     if not gross:
         poor_man = _SUBTOTAL_MASK.sub(" ", txt)
+        gross = _label_amount(poor_man, _STRONG_TOTAL_LABELS, prefer_last=True)
+    if not gross:
+        poor_man = _SUBTOTAL_MASK.sub(" ", txt)
         gross = _label_amount(poor_man, _GROSS_LABELS, prefer_last=True)
     full = "\n".join(x for x in (header_text, footer_text) if x)
     if not gross:
         gross = _top_amount(full)
     if gross:
         ground = _label_ground(txt, _BAL_LABELS)
+        if not ground:
+            ground = _label_ground(txt, _STRONG_TOTAL_LABELS)
         if not ground:
             ground = _label_ground(txt, _GROSS_LABELS)
         g.setdefault("gross", ground or gross)
@@ -1295,7 +1432,7 @@ def _extract_totals(header_text: str, footer_text: str, line_sum: Decimal,
     if tax_amounts:
         tax_total = (sum(tax_amounts)).quantize(Decimal("0.01"))
     if tax_total is None:
-        tax_total = _label_amount(txt, _TAX_TOTAL_LABELS)
+        tax_total = _tax_label_amount(txt, _TAX_TOTAL_LABELS, exclude=(sub, gross))
     if tax_total is None:
         tax_total = ""
     disc = _label_amount(txt, _DISC_LABELS)
@@ -1319,9 +1456,73 @@ def _extract_totals(header_text: str, footer_text: str, line_sum: Decimal,
         if measured_disc:
             disc = measured_disc
     insurance = extra = ""
+    if not freight and gross and sub:
+        # OCR drops trailing ".00" (e.g. "Delivery Cost 50"): recover a freight
+        # figure when a freight label line is present and its amount reconciles
+        # the document's own totals exactly (gross == sub + freight).
+        try:
+            expected_freight = Decimal(gross) - Decimal(sub)
+            label_tokens_seen = False
+            for _fline in txt.splitlines():
+                _low = _fline.lower()
+                label_pos = -1
+                for _fp in _FREIGHT_LABELS:
+                    _m = _fp.search(_low)
+                    if _m:
+                        label_pos = _m.end()
+                        break
+                if label_pos < 0:
+                    continue
+                if re.search(r"\b(date|time|method|terms|address|eta|costs? of)\b", _low):
+                    continue
+                for _fcand in _amt_candidates(_fline[label_pos:]):
+                    _fv = _clean_amt(_fcand)
+                    if _fv is not None and Decimal(_fv) == expected_freight:
+                        label_tokens_seen = True
+                        break
+                if label_tokens_seen:
+                    break
+            if label_tokens_seen:
+                freight = str(expected_freight.quantize(Decimal("0.01")))
+        except Exception:
+            pass
     if not freight:
         if m := re.search(r"Insurance\s*[:#.]?\s*([\d., ]{3,})", txt, re.I):
             freight = _clean_amt(m.group(1))
+    # Subtotal re-election: if the captioned subtotal disagrees with the
+    # document's own net (gross - taxes - freight + discount) but the summed
+    # line items hit it exactly, the line-item sum is the stronger subtotal.
+    # This is the KM-style table case ("Neto 23301.32" captions the first tax
+    # row, but the true net is the totals row, which equals the line-item sum).
+    if sub and line_sum and gross:
+        try:
+            if tax_total:
+                expected_net = Decimal(gross) - Decimal(tax_total)
+            else:
+                expected_net = Decimal(gross)
+            if freight:
+                expected_net -= Decimal(freight)
+            if disc:
+                expected_net += Decimal(disc)
+            if Decimal(line_sum) == expected_net and Decimal(sub) != expected_net:
+                sub = str(expected_net.quantize(Decimal("0.01")))
+        except Exception:
+            pass
+    # KM-style breakdown: when the footer prints several 'rate net km total'
+    # rows that reconcile to the gross, the aggregate net is the subtotal even
+    # when a captioned subtotal only refers to a single rate row.
+    if sub and gross:
+        try:
+            _km = _parse_km_block(re.sub(r"\s+", " ", txt).lower())
+            if len(_km) >= 2:
+                _sn = sum(Decimal(p[1]) for p in _km)
+                _sk = sum(Decimal(p[2]) for p in _km)
+                if (str((_sn + _sk).quantize(Decimal("0.01"))) ==
+                        str(Decimal(gross).quantize(Decimal("0.01")))
+                        and Decimal(sub) != _sn):
+                    sub = str(_sn.quantize(Decimal("0.01")))
+        except Exception:
+            pass
     return gross, sub, tax_total, disc, freight
 
 
@@ -1484,7 +1685,7 @@ def extract(layout: PageLayout) -> ExtractedDoc:
                 if not _desc:
                     continue
                 # Only rows that are summary/tax totals (skipped as line items)
-                if not (_is_summary_row(_desc, _q, _u, _t) or _is_tax_label(_desc)):
+                if not (_is_summary_row(_desc, _q, _u, _t) or _is_tax_label(_desc) or _is_metric_row(_desc)):
                     continue
                 _moneys = [str(_money_token(x)) for x in (_q, _u, _t) if x and _money_token(x) is not None]
                 _lines.append((_desc + " " + " ".join(_moneys)).strip())
@@ -1493,8 +1694,27 @@ def extract(layout: PageLayout) -> ExtractedDoc:
             summary_rows_text = ""
 
     # totals --------------------------------------------------------------
+    # Body lines that carry money but sit outside the detected table (totals
+    # clusters, vertical label:amount blocks, balance summaries) are otherwise
+    # invisible to totals extraction.  Feed only money-bearing body lines so a
+    # document that prints its Subtotal/GST/Total outside the table still
+    # yields a complete header.  Prose-only body lines are skipped.
+    body_money_text = ""
+    try:
+        _body_money_lines = []
+        for _bl in layout.body_lines:
+            if not _bl.words:
+                continue
+            if any(_money_token(_w.text) is not None for _w in _bl.words):
+                _body_money_lines.append(_bl.text)
+        if _body_money_lines:
+            body_money_text = "\n".join(_body_money_lines)
+    except Exception:
+        body_money_text = ""
+
+    extra_txt = "\n".join(x for x in (summary_rows_text, body_money_text) if x)
     gross, sub, tax_total, disc, freight = _extract_totals(
-        header_text, footer_text, line_sum, doc.taxes, g, summary_rows_text)
+        header_text, footer_text, line_sum, doc.taxes, g, extra_txt)
 
     doc.gross = _numish(gross)
     doc.subtotal = _numish(sub)

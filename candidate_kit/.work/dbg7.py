@@ -1,23 +1,34 @@
-import sys, os
-sys.path.insert(0, r"D:\candidate_kit\candidate_kit")
-os.chdir(r"D:\candidate_kit\candidate_kit")
+﻿import sys, os
+sys.path.insert(0, os.getcwd())
+from pathlib import Path
+import autodraft.fields as F
 import autodraft.pipeline as P
-from autodraft.ocr import ocr_words
-P.WORK_DIR = P.Path(r"D:\candidate_kit\candidate_kit\.work")
 
-for f in ["INV-11","INV-16"]:
-    ndoc = P.pymupdf.open("documents/%s.pdf"%f)
-    npg = len(ndoc)
-    ndoc.close()
-    print("==== %s (%d pages)" % (f, npg))
-    for pg in range(npg):
-        P._render_page("documents/%s.pdf"%f, pg)
-        words = ocr_words(P.WORK_DIR / ("%s_p%d.png"%(f,pg+1)))
-        lines = {}
-        for w in words:
-            key = round(w.box.y0, 0)
-            lines.setdefault(key, []).append(w)
-        print("-- page %d: %d lines" % (pg+1, len(lines)))
-        for k in sorted(lines):
-            ws = sorted(lines[k], key=lambda w: w.box.x0)
-            print("   %5.0f: %s" % (k, " | ".join(w.text for w in ws)))
+def fam(a):
+    for n,v in F.__dict__.items():
+        if isinstance(v,list) and len(v) and hasattr(v[0],"search") and v is a[1]:
+            return n
+    return "?"
+
+log=[]
+_orig_la=F._label_amount; _orig_lg=F._label_ground
+def la(*a,**k):
+    r=_orig_la(*a,**k)
+    if not r: return r
+    log.append((fam(a),len(a[0].splitlines()),repr(r)))
+    return r
+def lg(*a,**k):
+    r=_orig_lg(*a,**k)
+    log.append(("G:"+fam(a),len(a[0].splitlines()),repr(r)))
+    return r
+F._label_amount=la; F._label_ground=lg
+for name in ["INV-06","DU-03"]:
+    log.clear()
+    ext, texts = P._extract_doc(str(Path("documents")/(name+".pdf")))
+    print("=====", name, "=> gross=",repr(ext.gross)," sub=",repr(ext.subtotal)," tax=",repr(ext.tax_total)," disc=",repr(ext.discount_amount)," nlines=",len(ext.line_items))
+    if texts:
+        print("     p0head:", repr((texts[0] or "")[:80]))
+    uniq=[]
+    for x in log:
+        if x not in uniq: uniq.append(x)
+    for x in uniq[:50]: print("   ",x)

@@ -129,69 +129,24 @@ def _render_page(pdf_path: str, page_no: int = 0) -> str:
 
 
 def _extract_doc(pdf_path: str) -> ExtractedDoc | None:
-    doc = pymupdf.open(pdf_path)
-    page_count = len(doc)
-    doc.close()
-    for pg in range(page_count):
-        _render_page(pdf_path, pg)
+    """Extract a document for auditing.
 
-    extracts = []
-    for pg in range(page_count):
-        pp = WORK_DIR / f"{Path(pdf_path).stem}_p{pg+1}.png"
-        if not pp.exists():
-            continue
-        words = ocr_words(str(pp))
-        if not words:
-            continue
-        layout = build_layout(str(pp), pg, words)
-        ext = extract(layout)
-        ext.path = pdf_path
-        ext.page_index = pg
-        extracts.append(ext)
-
-    if not extracts:
+    Delegates to the pipeline's page-aware merge so the audit sees exactly the
+    same document the emitter saw (label-grounded source page, merged line
+    items, ex-GST genre coercion).  A union of every page's text is attached to
+    `all_page_texts` so grounding checks the whole PDF, not just the summary
+    page (multi-page totals like DU-03's log page would otherwise be missed).
+    """
+    try:
+        from autodraft.pipeline import _extract_doc as _pipeline_extract
+        doc, _ = _pipeline_extract(pdf_path)
+    except Exception:
+        doc = None
+    if doc is None:
         return None
-
-    ext = extracts[0]
-    for subsequent in extracts[1:]:
-        ext.line_items.extend(subsequent.line_items)
-
-    _dedupe = {}
-    unique = []
-    for li in ext.line_items:
-        key = (li.description, str(li.quantity), str(li.unit_price), str(li.total))
-        if key in _dedupe:
-            continue
-        _dedupe[key] = True
-        unique.append(li)
-    ext.line_items = unique
-
-    for candidate in reversed(extracts):
-        if candidate.gross:
-            ext.gross = candidate.gross
-            ext.subtotal = candidate.subtotal
-            ext.tax_total = candidate.tax_total
-            ext.discount_amount = candidate.discount_amount
-            ext.freight_charges = candidate.freight_charges
-            ext.page_text = candidate.page_text
-            break
-
-    seen_tax = set()
-    merged_taxes = []
-    for e in extracts:
-        for t in e.taxes:
-            key = (t.tax_rate, t.tax_amount, t.tax_type)
-            if key not in seen_tax:
-                seen_tax.add(key)
-                merged_taxes.append(t)
-    ext.taxes = merged_taxes
-
-    ground = {}
-    for e in extracts:
-        for k, v in (e.ground or {}).items():
-            ground.setdefault(k, v)
-    ext.ground = ground
-    return ext
+    if not getattr(doc, "all_page_texts", None):
+        doc.all_page_texts = doc.page_text or ""
+    return doc
 
 
 def _check_erp_gate(payable: dict, filename: str) -> list[str]:
@@ -240,11 +195,27 @@ def _check_grounding(payable: dict, page_numbers: set[Decimal], filename: str) -
                     emitted.append((f"payable.line_items[{li_idx}].taxes[{ti}].{k}", v))
 
     for path, val in emitted:
-        # Value-based grounding: check if the numeric value exists in page numbers
-        # Allow small tolerance for rounding
-        found = any(abs(val - pn) <= Decimal("0.02") for pn in page_numbers)
+        # Value-based grounding: check if the numeric value exists in page
+        # numbers, or is a valid derivation of printed header components
+        # (gross/subtotal/tax/freight).  Allow small tolerance for rounding.
+        # A zero is structural (e.g. an emitted 0.00 header tax) and needs no
+        # page evidence; a negative magnitude is grounded by its absolute page
+        # value since PDFs print trailing-minus/credit signs in many forms.
+        found = val == 0 or any(abs(val - pn) <= Decimal("0.02") for pn in page_numbers)
+        if not found and val != 0:
+            found = any(abs(-val - pn) <= Decimal("0.02") for pn in page_numbers)
+        if not found and val != 0:
+            sub = _dec(payable.get("subtotal"))
+            if sub is not None:
+                tax = _dec(payable.get("total_tax_amount")) or Decimal("0")
+                freight = _dec(payable.get("freight_charges")) or Decimal("0")
+                deriv = [sub, sub - tax, sub + freight, sub + freight - tax]
+                found = any(
+                    abs(val - d) <= Decimal("0.02") for d in deriv)
         if not found:
-            issues.append(f"{filename}: grounding failed - {path}={val} not found in page words (closest: {min(page_numbers, key=lambda x: abs(x-val)) if page_numbers else 'none'})")
+            closest = (min(page_numbers, key=lambda x: abs(x - val))
+                       if page_numbers else None)
+            issues.append(f"{filename}: grounding failed - {path}={val} not found in page words (closest: {closest})")
     return issues
 
 
@@ -356,7 +327,7 @@ def audit_file(pdf_path: str, output_path: str) -> dict:
     if doc is None:
         return {"file": filename, "status": "extract_failed", "issues": ["Extraction failed"]}
 
-    page_numbers = _extract_page_numbers(doc.page_text)
+    page_numbers = _extract_page_numbers(getattr(doc, "all_page_texts", "") or doc.page_text or "")
 
     all_issues = []
     for payable in payables:

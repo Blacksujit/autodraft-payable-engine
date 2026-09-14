@@ -1,0 +1,9 @@
+INV-03_p1.png
+ NUMS: 3590736231 1.00 7,434.78 7,434.78 7,434.78 1,115.22 8,550.00
+
+ MONEYISH: 25May2025 Bahnhofstrasse9 Bahnhofstrasse9 NorthwindServicesZA(PtyVd:9446639440-Maria INV-75162461 Tel: 3012667428 PO-ZA218-81-057014 3590736231 VAT:3590736231 Amount ZAR 1.00 Item14607 7,434.78 15% 7,434.78 7,434.78 1,115.22 TOTAL ZAR 8,550.00 DueDate:8Jun2025 OakhaRANBuRG，BRANCHCODE506467，ACCOUNTNUMBER42354079285 -WeClean It All ccrequiresa50%deposit withthebalancepayableoncompletion. -Queries tobeforwarded /addressedwithWe Clean It All ccwithin 48hoursof job completion. CompanyRegistrationNo:8976/781226/23.RegisteredOffice:POBox5230Cresta,Johannesburg.Gauteng,2118,SouthAfrica.
+
+INV-03_p2.png
+ NUMS: 8,550.00
+
+ MONEYISH: 9446639440Maria INV-75162461 Bahnhofstrasse9 8,550.00 Tel:3012667428 8Jun2025 VAT:3590736231 CompanyRegistrationNo:8976/781226/23.RegisteredOffice:POBox5230,Cresta,Johannesburg.Gauteng,2118,SouthAfrica.

@@ -7,7 +7,7 @@ import pymupdf
 from autodraft.ocr import ocr_words
 from autodraft.geom import cluster_lines, group_lines_by_bands
 from autodraft.structure import build_layout
-from autodraft.fields import extract, ExtractedDoc, TaxItem
+from autodraft.fields import extract, ExtractedDoc, TaxItem, _money_token
 from autodraft.classify import decide
 from autodraft.oracle import build_payable, oracle_gate, format_output
 from autodraft.resolve import resolve_supplier, resolve_buyer, resolve_payment_terms, resolve_po_ids, resolve_taxes
@@ -161,9 +161,29 @@ def _extract_doc(pdf_path: str):
             return False
         return True
 
+    # A gross that was picked up behind a *final* balance label is authoritative;
+    # a generic "Total"/"Total for <section>" line is not (a section recap later
+    # on the page must not override the real invoice total).
+    def _strong_gross_label(c):
+        gr = _norm_gr((c.ground or {}).get("gross", ""))
+        if not gr:
+            return False
+        low = gr.lower()
+        return bool(re.search(
+            r"\b(?:total\s*(?:due|amount|payable|to\s*pay|inc)|amount\s*due|total\s*amount|"
+            r"balance\s*due|zu\s*zahlen|tasuda|verschuldigd|a\s*pagar|saldo|payable|brutto)\b",
+            low))
+
+    def _norm_gr(s):
+        s = re.sub(r"[\s\u00a0]+", " ", s or "").strip(" :.-")
+        return re.sub(r"^The\s+", "", s, flags=re.I)
+
     source = None
     labeled = [c for c in extracts if _labeled_gross(c)]
-    if labeled:
+    strong = [c for c in labeled if _strong_gross_label(c)]
+    if strong:
+        source = strong[-1]
+    elif labeled:
         source = labeled[-1]
     else:
         for candidate in reversed(extracts):
@@ -177,6 +197,11 @@ def _extract_doc(pdf_path: str):
         ext.discount_amount = source.discount_amount
         ext.freight_charges = source.freight_charges
         ext.page_text = source.page_text
+    # Snapshot the *original* per-page text before the source-page overwrite
+    # above: constricting them to a single page would hide real numbers on the
+    # other pages from audit grounding (e.g. the invoice page of a two-page
+    # invoice+payment-advice document).
+    _orig_page_texts = [(e.page_text or "") for e in extracts]
 
     # Merge taxes (deduplicate by rate+amount+type)
     seen_tax = set()
@@ -191,12 +216,40 @@ def _extract_doc(pdf_path: str):
 
     _apply_ex_gst_genre(ext, extracts)
 
+    # Subtotal re-election at merged scope: with all pages' line items in
+    # hand, if the chosen subtotal disagrees with the document's own net
+    # (gross - taxes - freight + discount) but the summed line items hit it
+    # exactly, the line-item sum is the stronger subtotal (KM-style breakdown
+    # tables caption a single rate row, not the aggregate net).
+    try:
+        _ls = Decimal(0)
+        for _li in ext.line_items:
+            _v = _money_token(_li.total) if _li.total else None
+            if _v is None and _li.unit_price and _li.quantity:
+                _v = (_money_token(_li.unit_price) or Decimal(0)) * (
+                    _money_token(_li.quantity) or Decimal(0))
+            if _v is not None:
+                _ls += _v
+        _ident_net = Decimal(ext.gross)
+        if ext.tax_total:
+            _ident_net -= Decimal(ext.tax_total)
+        if ext.freight_charges:
+            _ident_net -= Decimal(ext.freight_charges)
+        if ext.discount_amount:
+            _ident_net += Decimal(ext.discount_amount)
+        if (ext.subtotal and _ls == _ident_net
+                and Decimal(ext.subtotal) != _ident_net):
+            ext.subtotal = str(_ident_net.quantize(Decimal("0.01")))
+    except Exception:
+        pass
+
     ground = {}
     for e in extracts:
         for k, v in (e.ground or {}).items():
             ground.setdefault(k, v)
     ext.ground = ground
-    return ext, [e.page_text for e in extracts] if extracts else []
+    ext.all_page_texts = "\n".join(_orig_page_texts)
+    return ext, _orig_page_texts
 
 
 def process_pdf(pdf_path: str, output_dir: str = "") -> dict:

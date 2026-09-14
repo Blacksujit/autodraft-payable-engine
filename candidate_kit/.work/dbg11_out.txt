@@ -1,0 +1,5 @@
+('build', 0, 50, 'Invoice Date TAX INVOICE Cloverdale Print Ltd 25May2025 Bahnhofstrasse9 Bahnhofstrasse9 NorthwindServicesZA(PtyVd:9446639440-Maria Kask INV-75162461 Tel: 3012667428 Email: PO-ZA218-81-057014')
+('extract', 0, 1378, 'TAX INVOICE Invoice Date 25May2025 Bahnhofstrasse9 Cloverdal')
+('build', 1, 20, 'Customer PAYMENTADVICE NorthwindServicesZA(Pty)Ltd 9446639440Maria Kask InvoiceNumber INV-75162461 To:CloverdalePrintLtd AmountDue Bahnhofstrasse9 8,550.00 Due Date')
+('extract', 1, 310, 'PAYMENTADVICE Customer 9446639440Maria NorthwindServicesZA(P')
+RET texts lens=[310, 310]

@@ -1,0 +1,7 @@
+all_len=621
+ALL_TEXT:
+PAYMENTADVICE Customer 9446639440Maria NorthwindServicesZA(Pty)Ltd Kask To:CloverdalePrintLtd InvoiceNumber INV-75162461
+Web:www.blackpine-systems.za VAT:3590736231 Enterthe amount youare paying above CompanyRegistrationNo:8976/781226/23.RegisteredOffice:POBox5230,Cresta,Johannesburg.Gauteng,2118,SouthAfrica.
+PAYMENTADVICE Customer 9446639440Maria NorthwindServicesZA(Pty)Ltd Kask To:CloverdalePrintLtd InvoiceNumber INV-75162461
+Web:www.blackpine-systems.za VAT:3590736231 Enterthe amount youare paying above CompanyRegistrationNo:8976/781226/23.RegisteredOffice:POBox5230,Cresta,Johannesburg.Gauteng,2118,SouthAfrica.
+NUMS=2118.00,23.00,3590736231.00,75162461.00,781226.00,8976.00

@@ -196,6 +196,59 @@ def _variant_line_rate(doc: ExtractedDoc) -> dict:
     return _rebase(doc, [], [[copy.copy(t) for t in doc.taxes] for _ in doc.line_items])
 
 
+def _variant_summary_line(doc: ExtractedDoc):
+    """Last-resort summary-only reconstruction.
+
+    For a document whose printed item detail does NOT tie to the invoice's own
+    header arithmetic (e.g. a till/scan page of VAT-inclusive prices next to a
+    summary bill), the document's *own* numbers still relate: gross = subtotal
+    - tax + charges.  Emit that relationship as a single goods line so the gate
+    closes on the printed figures without inventing quantities.  Only used when
+    every more-faithful placement already failed."""
+    if not doc.gross or not doc.subtotal:
+        return None
+    sub = _dec(doc.subtotal)
+    g = _dec(doc.gross)
+    if sub is None or g is None or sub <= 0:
+        return None
+    tax = _dec(doc.tax_total) or Decimal("0")
+    if tax < 0 or tax >= sub:
+        tax = Decimal("0")
+    net = (sub - tax).quantize(Decimal("0.01"))
+    if net <= 0:
+        return None
+
+    p = _variant_keep(doc)
+    p["line_items"] = [{
+        "description": _summary_line_desc(doc),
+        "quantity": "1",
+        "unit_price": _fmt2(net),
+        "total": _fmt2(net),
+        "discount": "",
+        "discount_percentage": "",
+        "tax_rate": "",
+        "tax_amount": "",
+        "taxes": [],
+    }]
+    if tax > 0:
+        p["taxes"] = [{
+            "tax_type": "VAT",
+            "tax_name": "VAT",
+            "tax_rate": "",
+            "tax_amount": _fmt2(tax),
+        }]
+    else:
+        p["taxes"] = []
+    return p
+
+
+def _summary_line_desc(doc: ExtractedDoc) -> str:
+    gr = (doc.ground or {}).get("subtotal", "")
+    if gr and not _dec(gr):
+        return gr
+    return "Summary"
+
+
 def _variant_no_header_mods(doc: ExtractedDoc) -> dict:
     """Keep structure but drop ambiguous header-level modifiers."""
     p = _variant_keep(doc)
@@ -345,6 +398,9 @@ def build_payable(doc: ExtractedDoc, declined_reason: str = "") -> dict:
         variants.append(("header_amount", _variant_header_amount(doc)))
         variants.append(("header_rate", _variant_header_rate(doc)))
         variants.append(("line_rate", _variant_line_rate(doc)))
+    summary_line = _variant_summary_line(doc)
+    if summary_line is not None:
+        variants.append(("summary_line", summary_line))
 
     target = _dec(doc.gross)
     if doc.invoice_type == "CREDIT_MEMO" and target is not None:

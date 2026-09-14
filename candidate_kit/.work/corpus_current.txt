@@ -1,0 +1,44 @@
+﻿PASS/declined/errors: 13 29 0 of 42
+DU-02.pdf: DECLINED Invoice #554701215. Customs/consolidated declaration between third par
+DU-03.pdf: PASS gross=722.76 inv=202511121178
+DU-05.pdf: DECLINED Invoice #4305460168. ERP gate failed (gross_mismatch:?:8358769.00;0.00
+DU-05s.pdf: DECLINED Invoice #737664 from ndVantek Pte Ltd.. Customs/consolidated declarati
+DU-06.pdf: DECLINED Invoice #785255159 from europastry. Customs/consolidated declaration b
+DU-08.pdf: PASS gross=4.10 inv=1637106114015
+DU-09.pdf: DECLINED Invoice #1400220263 from 1400220263. ERP gate failed (gross_mismatch:?
+DU-10.pdf: DECLINED Invoice #5900366703 from DepartmentAccounts. ERP gate failed (gross_mi
+DU-11.pdf: DECLINED Invoice #795977 from Kreeditarvenr6265-K 00. ERP gate failed (gross_mi
+HLD-01.pdf: DECLINED Invoice #5901619152 from Larkspur Technologies. ERP gate failed (gross
+HLD-03.pdf: DECLINED Invoice #3845708. Customs/consolidated declaration between third parti
+HLD-05.pdf: DECLINED Invoice #7769922058 from 7769922058 12/06/2026. Customs/consolidated d
+HLD-08.pdf: DECLINED Invoice #6555156 from Fax :(893)6555156 CopyTax Invoice. ERP gate fail
+HLD-10.pdf: DECLINED Invoice #27044945 from NorthwindOperations OU Arve number:. ERP gate f
+INV-01.pdf: PASS gross=438.00 inv=852566
+INV-02.pdf: DECLINED Invoice #59444464164 from Northwind Technology 00 Meridian Logistics O
+INV-03.pdf: PASS gross=8550.00 inv=9446639440
+INV-04.pdf: PASS gross=6620.55 inv=INV7097292303
+INV-06.pdf: PASS gross=1683.98 inv=75884754
+INV-07.pdf: PASS gross=6620.55 inv=INV7097292303
+INV-09.pdf: DECLINED Invoice #2025/06/06 from Northwind. Customs/consolidated declaration b
+INV-10.pdf: DECLINED Invoice #19026090057. ERP gate failed (gross_mismatch:1902.00:503.27;5
+INV-11.pdf: PASS gross=83.21 inv=18109293
+INV-13.pdf: PASS gross=152587.46 inv=127564
+INV-14.pdf: PASS gross=29253.72 inv=Parnumnt117
+INV-15.pdf: PASS gross=29253.72 inv=Parnumnt117
+INV-16.pdf: DECLINED Invoice #952774062 from Northwind Operations O0 Arve number: TLLIR7283
+INV-19.pdf: DECLINED Invoice. ERP gate failed (gross_mismatch:8045.40:1200.00;0.00;1200.00;
+INV-20.pdf: PASS gross=12.10 inv=7856147
+INV-21.pdf: DECLINED Invoice #9884313366. Customs/consolidated declaration between third pa
+INV-23.pdf: DECLINED Invoice #259684. ERP gate failed (gross_mismatch:52159.92:13569.11;135
+INV-25.pdf: DECLINED Invoice. ERP gate failed (gross_mismatch:176.00:2026.00;0.00;2026.00;2
+INV-26.pdf: DECLINED Invoice from Rm68. Document is a quote/proforma/delivery note, not an 
+INV-27.pdf: DECLINED Invoice. ERP gate failed (gross_mismatch:70654.30:0.00;0.00;0.00): the
+INV-28.pdf: DECLINED Invoice #5506340887 from Oakhaven Systems. ERP gate failed (gross_mism
+INV-31.pdf: DECLINED Invoice #39015 from 100 Airport KPG III, LLC. PO#16299. ERP gate faile
+INV-32.pdf: DECLINED Invoice #131530 from 215 Req#:131530 4613 Conshohocken Avenue Philadel
+INV-33.pdf: DECLINED Invoice from Parked Decument Number: Project NRIC: PD 0 0& ▒PD B0?. ER
+INV-34.pdf: PASS gross=572.00 inv=
+INV-35.pdf: DECLINED Invoice #1000020040 from Cioxhealth. ERP gate failed (gross_mismatch:3
+INV-36.pdf: DECLINED Invoice #44273107 from Oracle. ERP gate failed (gross_mismatch:91580.5
+INV-37.pdf: DECLINED Invoice #497649 from 1120VERMONTAVENUEASSOCIATES,LLP. ERP gate failed 
+
