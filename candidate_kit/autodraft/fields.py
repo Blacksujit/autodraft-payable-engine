@@ -1716,6 +1716,50 @@ def extract(layout: PageLayout) -> ExtractedDoc:
     gross, sub, tax_total, disc, freight = _extract_totals(
         header_text, footer_text, line_sum, doc.taxes, g, extra_txt)
 
+    # stacked two-column totals: label on its own line with the amount stacked
+    # directly below ("SUBTOTAL", "TAX", "TOTAL(USD)", ...).  Grid-table parsers
+    # never see this layout, so recover it by scanning label->money pairs when
+    # the additive closure matches the printed gross exactly and nothing better
+    # was extracted above.
+    try:
+        _stack_src = None
+        if getattr(layout, "body_lines", None):
+            _stack_src = "\n".join(_bl.text for _bl in layout.body_lines if _bl.text)
+        elif footer_text:
+            _stack_src = footer_text
+        elif header_text:
+            _stack_src = header_text
+        if _stack_src and (not sub or not tax_total) and gross and _money_token(gross):
+            _lines = _stack_src.splitlines()
+
+            def _stack_money(_i):
+                for _j in range(_i + 1, min(_i + 6, len(_lines))):
+                    _v = _money_token(_lines[_j])
+                    if _v is not None:
+                        return _v
+                return None
+
+            _sa = _sb = _sg = None
+            for _i, _ln in enumerate(_lines):
+                if _sa is None and re.search(r"\bSU[B-]?\s*TOTAL\b", _ln, re.I):
+                    _sa = _stack_money(_i)
+                elif _sb is None and re.search(r"\bTAX(?:ES)?\b(?!.*\bID\b)", _ln, re.I):
+                    _sb = _stack_money(_i)
+                elif _sg is None and re.search(
+                        r"\b(?:GRAND\s+)?TOTAL\b(?:\([A-Z* ]*\))?(?!\s*TAX)", _ln, re.I):
+                    _sg = _stack_money(_i)
+            if _sa is not None and _sg is not None and _sa > 0 and _money_token(gross) is not None:
+                _gv = _money_token(gross)
+                if abs(_sg - _gv) <= Decimal("0.01"):
+                    _sbv = _sb if _sb is not None else Decimal(0)
+                    if abs(_sa + _sbv - _sg) <= Decimal("0.01"):
+                        if not sub:
+                            sub = _numish(str(_sa))
+                        if not tax_total and _sb is not None and _sb > 0:
+                            tax_total = str(_sb)
+    except Exception:
+        pass
+
     doc.gross = _numish(gross)
     doc.subtotal = _numish(sub)
     doc.tax_total = _numish(tax_total)

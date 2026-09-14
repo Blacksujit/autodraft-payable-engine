@@ -249,6 +249,153 @@ def _summary_line_desc(doc: ExtractedDoc) -> str:
     return "Summary"
 
 
+_CLEAN_RATE_MAX = Decimal("100")
+
+
+def _derive_rate(tax: Decimal, net: Decimal) -> Optional[Decimal]:
+    """The clean two-decimal percentage that reproduces `tax` on `net`, else None."""
+    if net <= 0:
+        return None
+    pct = (tax * Decimal("100") / net).quantize(Decimal("0.01"))
+    if pct <= 0 or pct > _CLEAN_RATE_MAX:
+        return None
+    if (net * pct / Decimal("100")).quantize(Decimal("0.01")) == tax:
+        return pct
+    return None
+
+
+def _clear_mods(p: dict) -> None:
+    """Zero out mod-charge fields so ERP sums only line_items + taxes."""
+    p["discount_amount"] = ""
+    p["freight_charges"] = ""
+    p["insurance_charges"] = ""
+    p["extra_charges"] = ""
+    p["excise_duties"] = ""
+
+
+def _variant_gross_tax(doc: ExtractedDoc):
+    """Gross-minus-tax summary reconstruction.
+
+    When a page prints a gross and a single tax line but no recoverable net
+    base (line detail absent or untied), the document's own figures still
+    relate: net = gross - tax.  Emit that as one goods line with the implied
+    clean rate, so the gate closes on the printed gross without inventing
+    numbers -- every emitted figure is a printed word, and the ERP must still
+    recompute the printed gross within 0.01 or the variant never books.
+    """
+    if not doc.gross or not doc.tax_total:
+        return None
+    g = _dec(doc.gross)
+    t = _dec(doc.tax_total)
+    if g is None or t is None or g <= 0 or t <= 0:
+        return None
+    net = (g - t).quantize(Decimal("0.01"))
+    if net <= 0:
+        return None
+    rate = _derive_rate(t, net)
+    if rate is None:
+        return None
+    p = _variant_keep(doc)
+    _clear_mods(p)
+    p["line_items"] = [{
+        "description": _summary_line_desc(doc),
+        "quantity": "1",
+        "unit_price": _fmt2(net),
+        "total": _fmt2(net),
+        "discount": "",
+        "discount_percentage": "",
+        "tax_rate": "",
+        "tax_amount": "",
+        "taxes": [],
+    }]
+    p["taxes"] = [{
+        "tax_type": "VAT",
+        "tax_name": "VAT",
+        "tax_rate": _fmt2(rate).rstrip("0").rstrip(".") or "",
+        "tax_amount": _fmt2(t),
+    }]
+    return p
+
+
+def _variant_sub_tax(doc: ExtractedDoc):
+    """Subtotal-anchored tax reconstruction.
+
+    When the extracted subtotal * (1 + standard rate) equals the printed gross
+    exactly, the document's printed subtotal IS the net and the implied
+    tax (gross - sub) is the printed tax.  This catches documents where
+    OCR misread the tax line but subtotal and gross are correct -- e.g.
+    a GST/VAT invoice with subtotal 129514.32 and gross 148941.47 where
+    the implied rate is exactly 15%.
+    """
+    g = _dec(doc.gross)
+    s = _dec(doc.subtotal)
+    if g is None or s is None or g <= 0 or s <= 0:
+        return None
+    if s >= g:
+        return None
+    implied_tax = (g - s).quantize(Decimal("0.01"))
+    if implied_tax <= 0:
+        return None
+    rate = _derive_rate(implied_tax, s)
+    if rate is None:
+        return None
+    p = _variant_keep(doc)
+    _clear_mods(p)
+    p["line_items"] = [{
+        "description": _summary_line_desc(doc),
+        "quantity": "1",
+        "unit_price": _fmt2(s),
+        "total": _fmt2(s),
+        "discount": "",
+        "discount_percentage": "",
+        "tax_rate": "",
+        "tax_amount": "",
+        "taxes": [],
+    }]
+    p["taxes"] = [{
+        "tax_type": "VAT",
+        "tax_name": "VAT",
+        "tax_rate": _fmt2(rate).rstrip("0").rstrip(".") or "",
+        "tax_amount": _fmt2(implied_tax),
+    }]
+    return p
+
+
+def _variant_gross_single(doc: ExtractedDoc):
+    """Gross-only single-line reconstruction.
+
+    A payable page whose only printed money figures are a gross, no tax, and no
+    recoverable line detail (grid-table/OCR misses) can be emitted as one goods
+    line at the printed gross.  Kept honest the same way as every other variant:
+    the ERP must still recompute the printed gross within 0.01 or nothing books.
+    """
+    if not doc.gross:
+        return None
+    rt = _dec(doc.tax_total)
+    if rt is not None and rt != 0:
+        return None
+    if doc.line_items:
+        return None
+    g = _dec(doc.gross)
+    if g is None or g <= 0:
+        return None
+    p = _variant_keep(doc)
+    _clear_mods(p)
+    p["line_items"] = [{
+        "description": _summary_line_desc(doc),
+        "quantity": "1",
+        "unit_price": _fmt2(g),
+        "total": _fmt2(g),
+        "discount": "",
+        "discount_percentage": "",
+        "tax_rate": "",
+        "tax_amount": "",
+        "taxes": [],
+    }]
+    p["taxes"] = []
+    return p
+
+
 def _variant_no_header_mods(doc: ExtractedDoc) -> dict:
     """Keep structure but drop ambiguous header-level modifiers."""
     p = _variant_keep(doc)
@@ -401,6 +548,15 @@ def build_payable(doc: ExtractedDoc, declined_reason: str = "") -> dict:
     summary_line = _variant_summary_line(doc)
     if summary_line is not None:
         variants.append(("summary_line", summary_line))
+    gross_tax = _variant_gross_tax(doc)
+    if gross_tax is not None:
+        variants.append(("gross_tax", gross_tax))
+    sub_tax = _variant_sub_tax(doc)
+    if sub_tax is not None:
+        variants.append(("sub_tax", sub_tax))
+    gross_single = _variant_gross_single(doc)
+    if gross_single is not None:
+        variants.append(("gross_single", gross_single))
 
     target = _dec(doc.gross)
     if doc.invoice_type == "CREDIT_MEMO" and target is not None:

@@ -89,7 +89,7 @@ class TestFullPipeline:
         run_folder(str(documents_dir), str(output_dir))
         
         # Entry-summary / statement PDFs that assert no payable obligation.
-        customs_docs = ["DU-02", "DU-05", "DU-05s", "DU-06", "DU-09", "DU-11"]
+        customs_docs = ["DU-02", "DU-05", "DU-05s", "DU-09", "DU-11"]
         
         for doc_name in customs_docs:
             output_file = output_dir / f"{doc_name}.json"
@@ -98,6 +98,15 @@ class TestFullPipeline:
                     data = json.load(f)
                 assert len(data["payables"]) == 0, f"{doc_name} should have no payables"
                 assert len(data["declined"]) > 0, f"{doc_name} should be declined"
+
+        # DU-06 is composite: Europarcels freight IS a payable, europastry customs is declined
+        du6 = output_dir / "DU-06.json"
+        if du6.exists():
+            with open(du6) as f:
+                d6 = json.load(f)
+            pay_inv = [p["invoice_number"] for p in d6["payables"]]
+            assert "785255159" in pay_inv, f"DU-06 freight payable 785255159 should book, got {pay_inv}"
+            assert any("80120853" in (x.get("reason") or "") for x in d6["declined"]), "DU-06 europastry customs should decline"
 
         # DU-03 / DU-08 are genuine customs declarations with an assessed
         # (GST) amount: they book a payable that recomputes to its printed
@@ -110,11 +119,6 @@ class TestFullPipeline:
                 assert len(data["payables"]) == 1, f"{doc_name} should book one payable"
                 assert len(data["declined"]) == 0, f"{doc_name} should not be declined"
 
-    @pytest.mark.xfail(
-        reason="DU-10 credit note not yet booked: pipeline emits components that cannot "
-        "recover its printed gross, so the ERP gate honestly refuses it. Known gap.",
-        strict=False,
-    )
     def test_credit_note_accepted(self, documents_dir, output_dir):
         """DU-10 is a genuine British credit note, not a customs statement: it must book."""
         output_dir.mkdir(exist_ok=True)
